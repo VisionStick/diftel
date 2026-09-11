@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBztc4L1_GsLPnOwdh5dAV2Ca7B3806Wx0",
@@ -21,13 +21,63 @@ const protocolInput = document.getElementById("messageProtocol");
 const feedback = document.getElementById("messageFeedback");
 const submitBtn = document.getElementById("messageSubmit");
 const counter = document.getElementById("messageCounter");
+const stage = document.getElementById("deliveryStage");
+const badge = document.getElementById("transmissionBadge");
+const deliveryTitle = document.getElementById("deliveryTitle");
+const deliveryText = document.getElementById("deliveryText");
+const deliveryPointServer = document.getElementById("deliveryPointServer");
+const deliveryPointDb = document.getElementById("deliveryPointDb");
 
 function updateCounter() {
   counter.textContent = `${messageInput.value.length}/140`;
 }
 
+function resetStage() {
+  stage.className = "delivery-stage";
+  badge.className = "transmission-badge";
+  badge.textContent = "ESPERA";
+  deliveryTitle.textContent = "Listo para transmitir";
+  deliveryText.textContent = "Tu mensaje viajará por la red hasta quedar registrado en Firebase.";
+  deliveryPointServer.classList.remove("active", "done");
+  deliveryPointDb.classList.remove("active", "done");
+}
+
+function beginStage() {
+  stage.className = "delivery-stage is-sending";
+  badge.className = "transmission-badge sending";
+  badge.textContent = "ENVIANDO";
+  deliveryTitle.textContent = "Paquete en tránsito 📩";
+  deliveryText.textContent = "El mensaje está viajando hacia el servidor. Esperando confirmación de la base de datos…";
+  deliveryPointServer.classList.add("active");
+  deliveryPointDb.classList.remove("done");
+}
+
+function successStage() {
+  stage.className = "delivery-stage is-success";
+  badge.className = "transmission-badge success";
+  badge.textContent = "RECIBIDO";
+  deliveryTitle.textContent = "¡Mensaje recibido! 📬";
+  deliveryText.textContent = "Firebase confirmó que el mensaje quedó guardado correctamente.";
+  deliveryPointServer.classList.remove("active");
+  deliveryPointServer.classList.add("done");
+  deliveryPointDb.classList.add("done");
+}
+
+function errorStage() {
+  stage.className = "delivery-stage";
+  badge.className = "transmission-badge error";
+  badge.textContent = "ERROR";
+  deliveryTitle.textContent = "No llegó el mensaje";
+  deliveryText.textContent = "La base de datos no confirmó la recepción. Puedes volver a intentarlo.";
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 messageInput.addEventListener("input", updateCounter);
 updateCounter();
+resetStage();
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -52,22 +102,38 @@ form.addEventListener("submit", async (event) => {
   submitBtn.textContent = "Transmitiendo…";
   feedback.textContent = "Enviando paquete a Realtime Database…";
   feedback.className = "message-feedback sending";
+  beginStage();
 
   try {
-    await push(ref(db, "messages"), {
-      name: name,
-      message: message,
-      protocol: protocol,
+    const newMessage = await push(ref(db, "messages"), {
+      name,
+      message,
+      protocol,
       status: "En tránsito"
     });
 
-    feedback.textContent = "Mensaje enviado correctamente. Estado: En tránsito.";
+    await wait(900);
+
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Tiempo de espera agotado")), 6000);
+      const unsubscribe = onValue(ref(db, `messages/${newMessage.key}`), snapshot => {
+        if (snapshot.exists()) {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        }
+      }, reject, { onlyOnce: false });
+    });
+
+    successStage();
+    feedback.textContent = "Confirmación recibida: el mensaje quedó guardado correctamente.";
     feedback.className = "message-feedback success";
     form.reset();
     updateCounter();
   } catch (error) {
     console.error("Error al enviar mensaje:", error);
-    feedback.textContent = "No se pudo enviar el mensaje. Revisa la conexión o las reglas de Firebase.";
+    errorStage();
+    feedback.textContent = "No se pudo confirmar el envío. Revisa la conexión o las reglas de Firebase.";
     feedback.className = "message-feedback error";
   }
 
