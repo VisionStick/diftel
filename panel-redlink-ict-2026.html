@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RedLink — Panel privado</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body data-page="admin">
+  <div class="page-glow" aria-hidden="true"></div>
+  <div class="circuit-bg" aria-hidden="true"></div>
+
+  <main class="admin-shell">
+    <section class="admin-card" id="loginPanel">
+      <span class="tagline">Panel reservado</span>
+      <h1>Administración RedLink</h1>
+      <p class="intro-text">Esta página no aparece en la navegación pública. Úsala para revisar mensajes, respuestas y métricas del stand.</p>
+
+      <form class="login-form" id="loginForm" autocomplete="off">
+        <div class="field-row">
+          <label for="adminEmail">Correo administrador</label>
+          <input id="adminEmail" type="email" placeholder="correo@ejemplo.cl" required />
+        </div>
+        <div class="field-row">
+          <label for="adminPassword">Contraseña</label>
+          <input id="adminPassword" type="password" placeholder="••••••••" required />
+        </div>
+        <button class="primary-btn full" type="submit">Entrar al panel</button>
+      </form>
+      <p class="admin-note" id="loginNote">Si Firebase Auth no está configurado, puedes activar modo demo en el archivo firebase-config.js.</p>
+    </section>
+
+    <section class="dashboard hidden" id="dashboardPanel">
+      <div class="dash-top">
+        <div>
+          <span class="tagline">Historial del stand</span>
+          <h1>Panel de mensajes</h1>
+        </div>
+        <div class="dash-actions">
+          <button class="soft-btn" id="exportBtn" type="button">Exportar CSV</button>
+          <button class="soft-btn danger" id="logoutBtn" type="button">Salir</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <article><span>Total mensajes</span><strong id="statMessages">0</strong></article>
+        <article><span>Participantes</span><strong id="statUsers">0</strong></article>
+        <article><span>Correctas</span><strong id="statCorrect">0</strong></article>
+        <article><span>Entregados</span><strong id="statDelivered">0</strong></article>
+      </div>
+
+      <div class="filter-bar">
+        <input id="searchFilter" placeholder="Buscar por nombre, mensaje o respuesta…" />
+        <input id="nameFilter" placeholder="Filtrar por nombre" />
+        <input id="dateFilter" type="date" />
+        <button class="soft-btn" id="clearFiltersBtn" type="button">Limpiar</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Hora</th>
+              <th>Nombre</th>
+              <th>Mensaje</th>
+              <th>Pregunta</th>
+              <th>Respuesta</th>
+              <th>Correcta</th>
+              <th>Estado</th>
+              <th>Protocolo</th>
+            </tr>
+          </thead>
+          <tbody id="messagesTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="assets/js/pages/private-panel.js"></script>
+</body>
+</html>
