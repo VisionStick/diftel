@@ -10,6 +10,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .message-section{padding:75px 0}
+    .message-card{max-width:760px;margin:0 auto;border:1px solid #173b56;background:#071827;border-radius:18px;padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.25)}
+    .message-form{display:grid;gap:16px}
+    .message-form label{display:grid;gap:7px;color:#9fb5c5;font-size:12px;font-weight:600}
+    .message-form input,.message-form textarea,.message-form select{width:100%;border:1px solid #1a405d;background:#0a2034;color:#f4f8fb;border-radius:10px;padding:12px 13px;outline:none;font:inherit}
+    .message-form textarea{min-height:120px;resize:vertical}
+    .message-form input:focus,.message-form textarea:focus,.message-form select:focus{border-color:#25d4f2;box-shadow:0 0 0 3px rgba(37,212,242,.08)}
+    .message-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .message-meta{display:flex;justify-content:space-between;gap:12px;color:#6f8ca0;font:10px JetBrains Mono,monospace}
+    .message-feedback{min-height:20px;margin:0;font-size:12px;color:#8ca5b7}
+    .message-feedback.success{color:#63e7a0}.message-feedback.error{color:#ff8c8c}.message-feedback.sending{color:#65dff3}
+    @media(max-width:700px){.message-row{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
   <div class="noise"></div>
@@ -25,6 +39,7 @@
 
     <nav class="nav" aria-label="Navegación principal">
       <a href="#simulador">Simulador</a>
+      <a href="#mensajes">Mensajes</a>
       <a href="#carrera">Carrera</a>
       <a href="#enlaces">Enlaces</a>
     </nav>
@@ -90,7 +105,6 @@
             <span class="device-icon">AP</span>
             <span><strong>Access Point</strong><small>172.16.0.2</small></span>
           </button>
-
           <div class="panel-divider"></div>
           <div class="panel-title">PROTOCOLO</div>
           <label class="select-label" for="protocol">Tipo de tráfico</label>
@@ -118,35 +132,17 @@
               <line x1="420" y1="275" x2="715" y2="395"></line>
               <line x1="665" y1="160" x2="870" y2="265"></line>
             </svg>
-
-            <button class="node pc selected" id="pc1" data-name="PC Cliente" data-ip="192.168.10.21" style="--x:12%;--y:23%;">
-              <span class="node-screen"></span><strong>PC Cliente</strong><small>192.168.10.21</small>
-            </button>
-
-            <button class="node router" id="r1" data-name="Router Core" data-ip="10.10.0.1" style="--x:37%;--y:46%;">
-              <span class="router-body">R</span><strong>Router Core</strong><small>10.10.0.1</small>
-            </button>
-
-            <button class="node switch" id="sw1" data-name="Switch Lab" data-ip="10.10.0.2" style="--x:62%;--y:22%;">
-              <span class="switch-body"><i></i><i></i><i></i><i></i></span><strong>Switch Lab</strong><small>10.10.0.2</small>
-            </button>
-
-            <button class="node server" id="srv" data-name="Servidor" data-ip="10.0.0.10" style="--x:82%;--y:44%;">
-              <span class="server-body"><i></i><i></i><i></i></span><strong>Servidor</strong><small>10.0.0.10</small>
-            </button>
-
-            <button class="node ap" id="ap" data-name="Access Point" data-ip="172.16.0.2" style="--x:67%;--y:70%;">
-              <span class="ap-body">⌁</span><strong>Access Point</strong><small>172.16.0.2</small>
-            </button>
-
+            <button class="node pc selected" id="pc1" data-name="PC Cliente" data-ip="192.168.10.21" style="--x:12%;--y:23%;"><span class="node-screen"></span><strong>PC Cliente</strong><small>192.168.10.21</small></button>
+            <button class="node router" id="r1" data-name="Router Core" data-ip="10.10.0.1" style="--x:37%;--y:46%;"><span class="router-body">R</span><strong>Router Core</strong><small>10.10.0.1</small></button>
+            <button class="node switch" id="sw1" data-name="Switch Lab" data-ip="10.10.0.2" style="--x:62%;--y:22%;"><span class="switch-body"><i></i><i></i><i></i><i></i></span><strong>Switch Lab</strong><small>10.10.0.2</small></button>
+            <button class="node server" id="srv" data-name="Servidor" data-ip="10.0.0.10" style="--x:82%;--y:44%;"><span class="server-body"><i></i><i></i><i></i></span><strong>Servidor</strong><small>10.0.0.10</small></button>
+            <button class="node ap" id="ap" data-name="Access Point" data-ip="172.16.0.2" style="--x:67%;--y:70%;"><span class="ap-body">⌁</span><strong>Access Point</strong><small>172.16.0.2</small></button>
             <div class="packet" id="packet" aria-hidden="true"><span></span></div>
           </div>
 
           <div class="sim-controls">
             <div class="route-info">
-              <small>ORIGEN</small><strong id="originLabel">PC Cliente</strong>
-              <span>→</span>
-              <small>DESTINO</small><strong id="destinationLabel">Servidor</strong>
+              <small>ORIGEN</small><strong id="originLabel">PC Cliente</strong><span>→</span><small>DESTINO</small><strong id="destinationLabel">Servidor</strong>
             </div>
             <button class="btn btn-primary send-btn" id="sendBtn">Enviar paquete</button>
           </div>
@@ -154,21 +150,44 @@
 
         <aside class="event-panel">
           <div class="panel-title">EVENTOS</div>
-          <div class="event-list" id="eventList">
-            <div class="event neutral"><span>00</span><p><strong>Sistema</strong><small>Esperando una transmisión…</small></p></div>
-          </div>
+          <div class="event-list" id="eventList"><div class="event neutral"><span>00</span><p><strong>Sistema</strong><small>Esperando una transmisión…</small></p></div></div>
         </aside>
       </div>
     </section>
 
-    <section class="career" id="carrera">
+    <section class="message-section" id="mensajes">
       <div class="section-heading compact">
         <div>
-          <p class="eyebrow">Ingeniería Civil Telemática</p>
-          <h2>Conecta software, redes y personas.</h2>
+          <p class="eyebrow">Realtime Database</p>
+          <h2>Envía un mensaje a la red</h2>
         </div>
       </div>
+      <div class="message-card">
+        <form class="message-form" id="messageForm">
+          <div class="message-row">
+            <label>Nombre
+              <input id="senderName" type="text" maxlength="24" autocomplete="name" placeholder="Tu nombre" required>
+            </label>
+            <label>Protocolo
+              <select id="messageProtocol">
+                <option value="HTTP">HTTP</option>
+                <option value="ICMP">ICMP</option>
+                <option value="DNS">DNS</option>
+              </select>
+            </label>
+          </div>
+          <label>Mensaje
+            <textarea id="senderMessage" maxlength="140" placeholder="Escribe un mensaje para transmitir…" required></textarea>
+          </label>
+          <div class="message-meta"><span>Estado inicial: En tránsito</span><span id="messageCounter">0/140</span></div>
+          <button class="btn btn-primary" id="messageSubmit" type="submit">Enviar mensaje</button>
+          <p class="message-feedback" id="messageFeedback" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
 
+    <section class="career" id="carrera">
+      <div class="section-heading compact"><div><p class="eyebrow">Ingeniería Civil Telemática</p><h2>Conecta software, redes y personas.</h2></div></div>
       <div class="career-grid">
         <article><span>01</span><h3>Redes</h3><p>Diseño, administración y comprensión de infraestructuras de comunicación.</p></article>
         <article><span>02</span><h3>Software</h3><p>Programación y desarrollo de soluciones conectadas a servicios y dispositivos.</p></article>
@@ -178,26 +197,12 @@
     </section>
 
     <section class="links-section" id="enlaces">
-      <div class="section-heading compact">
-        <div>
-          <p class="eyebrow">Comunidad y recursos</p>
-          <h2>Sigue explorando Telemática USM</h2>
-        </div>
-      </div>
-
+      <div class="section-heading compact"><div><p class="eyebrow">Comunidad y recursos</p><h2>Sigue explorando Telemática USM</h2></div></div>
       <div class="resource-grid">
-        <a href="https://www.instagram.com/telematicausm" target="_blank" rel="noopener noreferrer">
-          <span>IG</span><div><strong>Telemática USM</strong><small>@telematicausm</small></div><b>↗</b>
-        </a>
-        <a href="https://www.instagram.com/diftelusm/" target="_blank" rel="noopener noreferrer">
-          <span>IG</span><div><strong>DIFTEL USM</strong><small>@diftelusm</small></div><b>↗</b>
-        </a>
-        <a href="https://www.instagram.com/ceetel.sj/" target="_blank" rel="noopener noreferrer">
-          <span>IG</span><div><strong>CEETEL San Joaquín</strong><small>@ceetel.sj</small></div><b>↗</b>
-        </a>
-        <a href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer">
-          <span>MX</span><div><strong>Malla interactiva</strong><small>diftel.josnic.cl</small></div><b>↗</b>
-        </a>
+        <a href="https://www.instagram.com/telematicausm" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>Telemática USM</strong><small>@telematicausm</small></div><b>↗</b></a>
+        <a href="https://www.instagram.com/diftelusm/" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>DIFTEL USM</strong><small>@diftelusm</small></div><b>↗</b></a>
+        <a href="https://www.instagram.com/ceetel.sj/" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>CEETEL San Joaquín</strong><small>@ceetel.sj</small></div><b>↗</b></a>
+        <a href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer"><span>MX</span><div><strong>Malla interactiva</strong><small>diftel.josnic.cl</small></div><b>↗</b></a>
       </div>
     </section>
   </main>
@@ -208,5 +213,6 @@
   </footer>
 
   <script src="script.js"></script>
+  <script type="module" src="firebase.js"></script>
 </body>
 </html>
