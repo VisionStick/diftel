@@ -22,13 +22,40 @@ if(!telemetry){
   telemetry.className='sim-telemetry';
   telemetry.innerHTML=`
     <div><small>PROTOCOLO</small><strong id="packetProtocol">${protocol.value}</strong></div>
-    <div><small>SALTOS</small><strong id="hopLabel">3 saltos</strong></div>
+    <div><small>SALTOS</small><strong id="hopLabel">0 saltos</strong></div>
     <div><small>ESTADO</small><strong id="packetStatus">Preparado</strong></div>`;
   document.querySelector('.sim-controls')?.prepend(telemetry);
 }
 const hopLabel = document.getElementById('hopLabel');
 const packetProtocol = document.getElementById('packetProtocol');
 const packetStatus = document.getElementById('packetStatus');
+
+/* Selectores reales de origen y destino */
+const devicePanel = document.querySelector('.device-panel');
+let routeChooser = document.getElementById('routeChooser');
+if(!routeChooser && devicePanel){
+  routeChooser = document.createElement('div');
+  routeChooser.id='routeChooser';
+  routeChooser.className='route-chooser';
+  routeChooser.innerHTML=`
+    <div class="panel-divider"></div>
+    <div class="panel-title">RUTA</div>
+    <label class="select-label" for="originSelect">Origen</label>
+    <select id="originSelect">
+      <option value="pc1">PC Cliente</option>
+      <option value="srv">Servidor</option>
+      <option value="ap">Access Point</option>
+    </select>
+    <label class="select-label route-destination-label" for="destinationSelect">Destino</label>
+    <select id="destinationSelect">
+      <option value="srv">Servidor</option>
+      <option value="ap">Access Point</option>
+      <option value="pc1">PC Cliente</option>
+    </select>`;
+  devicePanel.insertBefore(routeChooser, devicePanel.querySelector('.panel-divider'));
+}
+const originSelect = document.getElementById('originSelect');
+const destinationSelect = document.getElementById('destinationSelect');
 
 /* El recurso ya no se presenta como una malla: es la página DIFTEL. */
 document.querySelectorAll('a[href="https://diftel.josnic.cl/"]').forEach(link=>{
@@ -37,6 +64,7 @@ document.querySelectorAll('a[href="https://diftel.josnic.cl/"]').forEach(link=>{
   if(link.classList.contains('btn')) link.textContent='Visitar página DIFTEL';
 });
 
+let origin = 'pc1';
 let destination = 'srv';
 let running = false;
 let generation = 0;
@@ -49,9 +77,12 @@ const positions = {
   ap: {x:67,y:70}
 };
 
-const routes = {
-  srv: ['pc1','r1','sw1','srv'],
-  ap: ['pc1','r1','ap']
+const graph = {
+  pc1:['r1'],
+  r1:['pc1','sw1','ap'],
+  sw1:['r1','srv'],
+  srv:['sw1'],
+  ap:['r1']
 };
 
 const linkMap = {
@@ -66,6 +97,25 @@ const linkMap = {
 };
 
 function getNode(id){ return document.getElementById(id); }
+function nodeName(id){ return getNode(id)?.dataset.name || id; }
+
+function shortestRoute(start,end){
+  if(start===end) return [start];
+  const queue=[[start]];
+  const visited=new Set([start]);
+  while(queue.length){
+    const path=queue.shift();
+    const last=path[path.length-1];
+    for(const next of graph[last]||[]){
+      if(visited.has(next)) continue;
+      const newPath=[...path,next];
+      if(next===end) return newPath;
+      visited.add(next);
+      queue.push(newPath);
+    }
+  }
+  return [];
+}
 
 function wait(ms, token){
   return new Promise((resolve,reject)=>setTimeout(()=>token===generation?resolve():reject(new Error('simulation-cancelled')),ms));
@@ -101,36 +151,78 @@ function setPacketAt(id){
   packet.style.top=p.y+'%';
 }
 
-function selectDestination(id){
-  if(running || !routes[id]) return;
-  destination=id;
+function updateRouteUI(){
   generation+=1;
-  clearSelection();
+  running=false;
   clearRouteHighlights();
+  clearSelection();
   packet.classList.remove('active','delivered');
-  setPacketAt('pc1');
-  const node=getNode(id);
-  node?.classList.add('selected');
-  document.querySelector(`.device-card[data-device="${id}"]`)?.classList.add('active');
-  destinationLabel.textContent=node?.dataset.name||'Destino';
-  originLabel.textContent='PC Cliente';
-  simState.textContent='Ruta lista';
-  packetStatus.textContent='Preparado';
-  hopLabel.textContent=`${routes[id].length-1} saltos`;
+  setPacketAt(origin);
+
+  originLabel.textContent=nodeName(origin);
+  destinationLabel.textContent=nodeName(destination);
+
+  document.querySelector(`.device-card[data-device="${destination}"]`)?.classList.add('active');
+  getNode(origin)?.classList.add('hop-done');
+  getNode(destination)?.classList.add('selected');
+
+  const route=shortestRoute(origin,destination);
+  hopLabel.textContent=route.length>1?`${route.length-1} saltos`:'0 saltos';
+
+  if(origin===destination){
+    simState.textContent='Origen y destino no pueden ser iguales';
+    packetStatus.textContent='Ruta inválida';
+    sendBtn.disabled=true;
+  }else{
+    simState.textContent='Ruta lista';
+    packetStatus.textContent='Preparado';
+    sendBtn.disabled=false;
+  }
 }
 
+originSelect?.addEventListener('change',()=>{
+  origin=originSelect.value;
+  if(origin===destination){
+    const options=[...destinationSelect.options].map(o=>o.value);
+    destination=options.find(value=>value!==origin) || 'srv';
+    destinationSelect.value=destination;
+  }
+  updateRouteUI();
+});
+
+destinationSelect?.addEventListener('change',()=>{
+  destination=destinationSelect.value;
+  if(destination===origin){
+    const options=[...originSelect.options].map(o=>o.value);
+    origin=options.find(value=>value!==destination) || 'pc1';
+    originSelect.value=origin;
+  }
+  updateRouteUI();
+});
+
 cards.forEach(card=>card.addEventListener('click',()=>{
+  if(running) return;
   const id=card.dataset.device;
-  if(id==='pc1'){
-    if(!running){simState.textContent='PC Cliente es el origen';packetStatus.textContent='Elige destino';}
+  if(id===origin){
+    simState.textContent='Ese equipo ya es el origen';
+    packetStatus.textContent='Elige otro destino';
     return;
   }
-  selectDestination(id);
+  destination=id;
+  if(destinationSelect) destinationSelect.value=id;
+  updateRouteUI();
 }));
 
 nodes.forEach(node=>node.addEventListener('click',()=>{
-  if(['r1','sw1','pc1'].includes(node.id)) return;
-  selectDestination(node.id);
+  if(running || ['r1','sw1'].includes(node.id)) return;
+  if(node.id===origin){
+    simState.textContent='Ese equipo ya es el origen';
+    packetStatus.textContent='Elige otro destino';
+    return;
+  }
+  destination=node.id;
+  if(destinationSelect) destinationSelect.value=node.id;
+  updateRouteUI();
 }));
 
 protocol.addEventListener('change',()=>{
@@ -151,9 +243,9 @@ function movePacket(id,duration,token){
 }
 
 async function sendPacket(){
-  if(running) return;
-  const route=routes[destination];
-  if(!route){simState.textContent='Selecciona un destino válido';return;}
+  if(running || origin===destination) return;
+  const route=shortestRoute(origin,destination);
+  if(route.length<2){simState.textContent='No se encontró una ruta válida';return;}
 
   const token=++generation;
   running=true;
@@ -165,10 +257,10 @@ async function sendPacket(){
   packetProtocol.textContent=protocol.value;
   packetStatus.textContent='En tránsito';
   hopLabel.textContent=`0 / ${route.length-1}`;
-  setPacketAt('pc1');
+  setPacketAt(origin);
   packet.classList.add('active');
-  getNode('pc1')?.classList.add('hop-done');
-  addEvent(1,'PC Cliente',`${protocol.value}: paquete creado con destino ${destinationLabel.textContent}.`,'info');
+  getNode(origin)?.classList.add('hop-done');
+  addEvent(1,nodeName(origin),`${protocol.value}: paquete creado con destino ${nodeName(destination)}.`,'info');
 
   try{
     await wait(260,token);
@@ -177,8 +269,8 @@ async function sendPacket(){
       const line=getLink(from,to),node=getNode(to);
       line?.classList.add('route-active');
       node?.classList.add('hop-active');
-      simState.textContent=`Salto ${i}: ${node?.dataset.name||to}`;
-      packetStatus.textContent=`→ ${node?.dataset.name||to}`;
+      simState.textContent=`Salto ${i}: ${nodeName(to)}`;
+      packetStatus.textContent=`→ ${nodeName(to)}`;
       hopLabel.textContent=`${i} / ${route.length-1}`;
       await movePacket(to,620,token);
       line?.classList.remove('route-active');
@@ -186,7 +278,7 @@ async function sendPacket(){
       node?.classList.remove('hop-active');
       node?.classList.add('hop-done');
       const isLast=i===route.length-1;
-      addEvent(i+1,node?.dataset.name||'Nodo',isLast?'Paquete recibido correctamente.':'Paquete procesado y reenviado.',isLast?'success':'normal');
+      addEvent(i+1,nodeName(to),isLast?'Paquete recibido correctamente.':'Paquete procesado y reenviado.',isLast?'success':'normal');
       await wait(140,token);
     }
     if(token!==generation)return;
@@ -204,22 +296,14 @@ async function sendPacket(){
 function resetSimulation(){
   generation+=1;
   running=false;
-  clearRouteHighlights();
-  packet.classList.remove('active','delivered');
-  setPacketAt('pc1');
-  eventList.innerHTML='<div class="event neutral"><span>00</span><p><strong>Sistema</strong><small>Esperando una transmisión…</small></p></div>';
-  sendBtn.disabled=false;
-  sendBtn.textContent='Enviar paquete';
-  simState.textContent='Listo';
+  origin='pc1';
   destination='srv';
-  clearSelection();
-  document.querySelector('.device-card[data-device="srv"]')?.classList.add('active');
-  getNode('srv')?.classList.add('selected');
-  destinationLabel.textContent='Servidor';
-  originLabel.textContent='PC Cliente';
+  if(originSelect) originSelect.value=origin;
+  if(destinationSelect) destinationSelect.value=destination;
+  eventList.innerHTML='<div class="event neutral"><span>00</span><p><strong>Sistema</strong><small>Esperando una transmisión…</small></p></div>';
+  sendBtn.textContent='Enviar paquete';
   packetProtocol.textContent=protocol.value;
-  packetStatus.textContent='Preparado';
-  hopLabel.textContent='3 saltos';
+  updateRouteUI();
 }
 
 sendBtn.addEventListener('click',sendPacket);
