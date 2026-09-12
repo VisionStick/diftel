@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=20260911-3">
   <link rel="stylesheet" href="enhancements.css?v=20260911-3">
+  <link rel="stylesheet" href="polish.css?v=20260911-4">
 </head>
 <body>
   <div class="noise"></div>
@@ -43,10 +44,7 @@
       <div class="hero-copy">
         <p class="eyebrow">Departamento de Electrónica · Telemática</p>
         <h1>Entiende la red.<br><span>Ve cómo viaja la información.</span></h1>
-        <p class="hero-text">
-          Una experiencia interactiva inspirada en herramientas de simulación de redes,
-          pensada para acercar Telemática de una forma visual, técnica y simple.
-        </p>
+        <p class="hero-text">Una experiencia interactiva inspirada en herramientas de simulación de redes, pensada para acercar Telemática de una forma visual, técnica y simple.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#simulador">Abrir simulación</a>
           <a class="btn btn-secondary" href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer">Visitar página DIFTEL</a>
@@ -141,18 +139,7 @@
               <label>Nombre<input id="senderName" type="text" maxlength="24" autocomplete="name" placeholder="Tu nombre" required></label>
               <label>Protocolo
                 <select id="messageProtocol" aria-describedby="messageProtocolHelp">
-                  <option value="TCP">TCP · Transporte confiable</option>
-                  <option value="UDP">UDP · Datagrama rápido</option>
-                  <option value="HTTP">HTTP · Web</option>
-                  <option value="HTTPS">HTTPS · Web segura</option>
-                  <option value="ICMP">ICMP · Ping / diagnóstico</option>
-                  <option value="DNS">DNS · Resolución de nombres</option>
-                  <option value="DHCP">DHCP · Asignación de IP</option>
-                  <option value="FTP">FTP · Transferencia de archivos</option>
-                  <option value="SMTP">SMTP · Correo electrónico</option>
-                  <option value="SSH">SSH · Acceso remoto</option>
-                  <option value="ARP">ARP · Resolución IP/MAC</option>
-                  <option value="ETHERNET">Ethernet · Trama LAN</option>
+                  <option value="TCP">TCP · Transporte confiable</option><option value="UDP">UDP · Datagrama rápido</option><option value="HTTP">HTTP · Web</option><option value="HTTPS">HTTPS · Web segura</option><option value="ICMP">ICMP · Ping / diagnóstico</option><option value="DNS">DNS · Resolución de nombres</option><option value="DHCP">DHCP · Asignación de IP</option><option value="FTP">FTP · Transferencia de archivos</option><option value="SMTP">SMTP · Correo electrónico</option><option value="SSH">SSH · Acceso remoto</option><option value="ARP">ARP · Resolución IP/MAC</option><option value="ETHERNET">Ethernet · Trama LAN</option>
                 </select>
                 <small id="messageProtocolHelp" class="message-protocol-note">TCP: entrega confiable, ordenada y con confirmación.</small>
               </label>
@@ -165,90 +152,30 @@
         </div>
 
         <div class="transmission-card">
-          <div class="transmission-head">
-            <div><strong>Ruta del mensaje</strong><small>cliente → servidor → base de datos</small></div>
-            <span class="transmission-badge" id="transmissionBadge">ESPERA</span>
-          </div>
-
+          <div class="transmission-head"><div><strong>Ruta del mensaje</strong><small>cliente → servidor → base de datos</small></div><span class="transmission-badge" id="transmissionBadge">ESPERA</span></div>
           <div class="delivery-stage" id="deliveryStage">
-            <div class="delivery-line"></div>
-            <div class="mail-packet">📩</div>
-            <div class="delivery-points">
-              <div class="delivery-point done"><div class="delivery-icon">💻</div><strong>Cliente</strong><small>ORIGEN</small></div>
-              <div class="delivery-point" id="deliveryPointServer"><div class="delivery-icon">🖥️</div><strong>Servidor</strong><small>RUTA</small></div>
-              <div class="delivery-point" id="deliveryPointDb"><div class="delivery-icon">🔥</div><strong>Firebase</strong><small>DESTINO</small></div>
-            </div>
-            <div class="delivery-copy">
-              <strong id="deliveryTitle">Listo para transmitir</strong>
-              <p id="deliveryText">Tu mensaje viajará por la red hasta quedar registrado en Firebase.</p>
-              <div class="delivery-check">✓</div>
-            </div>
+            <div class="delivery-line"></div><div class="mail-packet">📩</div>
+            <div class="delivery-points"><div class="delivery-point done"><div class="delivery-icon">💻</div><strong>Cliente</strong><small>ORIGEN</small></div><div class="delivery-point" id="deliveryPointServer"><div class="delivery-icon">🖥️</div><strong>Servidor</strong><small>RUTA</small></div><div class="delivery-point" id="deliveryPointDb"><div class="delivery-icon">🔥</div><strong>Firebase</strong><small>DESTINO</small></div></div>
+            <div class="delivery-copy"><strong id="deliveryTitle">Listo para transmitir</strong><p id="deliveryText">Tu mensaje viajará por la red hasta quedar registrado en Firebase.</p><div class="delivery-check">✓</div></div>
           </div>
         </div>
       </div>
     </section>
 
     <section class="game-section" id="juego">
-      <div class="section-heading">
-        <div><p class="eyebrow">Mini desafío</p><h2>Adivina el concepto</h2></div>
-        <p>Responde preguntas rápidas de redes, protocolos y seguridad. No necesitas registrarte y nada se guarda en Firebase.</p>
-      </div>
-
+      <div class="section-heading"><div><p class="eyebrow">Mini desafío</p><h2>Adivina el concepto</h2></div><p>Responde preguntas rápidas de redes, protocolos y seguridad. No necesitas registrarte y nada se guarda en Firebase.</p></div>
       <div class="game-shell">
-        <div class="game-info">
-          <div>
-            <p class="eyebrow">Modo juego</p>
-            <h3>¿Cuánto cachas de Telemática?</h3>
-            <p>Lee la pista, escribe el concepto y comprueba si acertaste. Cada respuesta correcta suma 100 puntos.</p>
-          </div>
-          <div class="game-stats">
-            <div class="game-stat"><small>PUNTOS</small><strong id="gameScore">0</strong></div>
-            <div class="game-stat"><small>RACHA</small><strong id="gameStreak">0</strong></div>
-            <div class="game-stat"><small>INTENTOS</small><strong id="gameAttempts">0</strong></div>
-          </div>
-        </div>
-
-        <div class="game-card">
-          <div class="game-topline"><span class="game-category" id="gameCategory">REDES</span><span class="game-number" id="gameNumber">1/5</span></div>
-          <div class="game-clue" id="gameClue"></div>
-          <div class="game-input-wrap">
-            <input class="game-answer" id="gameAnswer" type="text" autocomplete="off" placeholder="Escribe tu respuesta…">
-            <button class="btn btn-primary game-submit" id="gameSubmit" type="button">Comprobar</button>
-          </div>
-          <p class="game-feedback" id="gameFeedback">Escribe tu respuesta y comprueba si acertaste.</p>
-          <div class="game-actions">
-            <button class="game-hint" id="gameHint" type="button">Necesito una pista</button>
-            <button class="btn btn-secondary game-next" id="gameNext" type="button">Siguiente pregunta</button>
-          </div>
-        </div>
+        <div class="game-info"><div><p class="eyebrow">Modo juego</p><h3>¿Cuánto cachas de Telemática?</h3><p>Lee la pista, escribe el concepto y comprueba si acertaste. Cada respuesta correcta suma 100 puntos.</p></div><div class="game-stats"><div class="game-stat"><small>PUNTOS</small><strong id="gameScore">0</strong></div><div class="game-stat"><small>RACHA</small><strong id="gameStreak">0</strong></div><div class="game-stat"><small>INTENTOS</small><strong id="gameAttempts">0</strong></div></div></div>
+        <div class="game-card"><div class="game-topline"><span class="game-category" id="gameCategory">REDES</span><span class="game-number" id="gameNumber">1/5</span></div><div class="game-clue" id="gameClue"></div><div class="game-input-wrap"><input class="game-answer" id="gameAnswer" type="text" autocomplete="off" placeholder="Escribe tu respuesta…"><button class="btn btn-primary game-submit" id="gameSubmit" type="button">Comprobar</button></div><p class="game-feedback" id="gameFeedback">Escribe tu respuesta y comprueba si acertaste.</p><div class="game-actions"><button class="game-hint" id="gameHint" type="button">Necesito una pista</button><button class="btn btn-secondary game-next" id="gameNext" type="button">Siguiente pregunta</button></div></div>
       </div>
     </section>
 
-    <section class="career" id="carrera">
-      <div class="section-heading compact"><div><p class="eyebrow">Ingeniería Civil Telemática</p><h2>Conecta software, redes y personas.</h2></div></div>
-      <div class="career-grid">
-        <article><span>01</span><h3>Redes</h3><p>Diseño, administración y comprensión de infraestructuras de comunicación.</p></article>
-        <article><span>02</span><h3>Software</h3><p>Programación y desarrollo de soluciones conectadas a servicios y dispositivos.</p></article>
-        <article><span>03</span><h3>Ciberseguridad</h3><p>Protección de sistemas, comunicaciones y datos en entornos digitales.</p></article>
-        <article><span>04</span><h3>Telecomunicaciones</h3><p>Tecnologías que permiten transportar información entre personas y sistemas.</p></article>
-      </div>
-    </section>
+    <section class="career" id="carrera"><div class="section-heading compact"><div><p class="eyebrow">Ingeniería Civil Telemática</p><h2>Conecta software, redes y personas.</h2></div></div><div class="career-grid"><article><span>01</span><h3>Redes</h3><p>Diseño, administración y comprensión de infraestructuras de comunicación.</p></article><article><span>02</span><h3>Software</h3><p>Programación y desarrollo de soluciones conectadas a servicios y dispositivos.</p></article><article><span>03</span><h3>Ciberseguridad</h3><p>Protección de sistemas, comunicaciones y datos en entornos digitales.</p></article><article><span>04</span><h3>Telecomunicaciones</h3><p>Tecnologías que permiten transportar información entre personas y sistemas.</p></article></div></section>
 
-    <section class="links-section" id="enlaces">
-      <div class="section-heading compact"><div><p class="eyebrow">Comunidad y recursos</p><h2>Sigue explorando Telemática USM</h2></div></div>
-      <div class="resource-grid">
-        <a href="https://www.instagram.com/telematicausm" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>Telemática USM</strong><small>@telematicausm</small></div><b>↗</b></a>
-        <a href="https://www.instagram.com/diftelusm/" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>DIFTEL USM</strong><small>@diftelusm</small></div><b>↗</b></a>
-        <a href="https://www.instagram.com/ceetel.sj/" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>CEETEL San Joaquín</strong><small>@ceetel.sj</small></div><b>↗</b></a>
-        <a href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer"><span>WEB</span><div><strong>Página DIFTEL</strong><small>diftel.josnic.cl</small></div><b>↗</b></a>
-      </div>
-    </section>
+    <section class="links-section" id="enlaces"><div class="section-heading compact"><div><p class="eyebrow">Comunidad y recursos</p><h2>Sigue explorando Telemática USM</h2></div></div><div class="resource-grid"><a href="https://www.instagram.com/telematicausm" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>Telemática USM</strong><small>@telematicausm</small></div><b>↗</b></a><a href="https://www.instagram.com/diftelusm/" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>DIFTEL USM</strong><small>@diftelusm</small></div><b>↗</b></a><a href="https://www.instagram.com/ceetel.sj/" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>CEETEL San Joaquín</strong><small>@ceetel.sj</small></div><b>↗</b></a><a href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer"><span>WEB</span><div><strong>Página DIFTEL</strong><small>diftel.josnic.cl</small></div><b>↗</b></a></div></section>
   </main>
 
-  <footer>
-    <div class="footer-brand"><span class="brand-mark small">T</span><div><strong>Telemática USM</strong><small>Campus San Joaquín</small></div></div>
-    <p>Sitio experimental de difusión · Proyecto independiente</p>
-  </footer>
+  <footer><div class="footer-brand"><span class="brand-mark small">T</span><div><strong>Telemática USM</strong><small>Campus San Joaquín</small></div></div><p>Sitio experimental de difusión · Proyecto independiente</p></footer>
 
   <script src="script.js?v=20260911-3"></script>
   <script src="game.js?v=20260911-3"></script>
