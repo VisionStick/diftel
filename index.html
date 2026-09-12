@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="enhancements.css?v=20260911-3">
   <link rel="stylesheet" href="polish.css?v=20260911-4">
   <link rel="stylesheet" href="topology-extra.css?v=20260912-1">
+  <link rel="stylesheet" href="layout-tweaks.css?v=20260912-2">
 </head>
 <body>
   <div class="noise"></div>
@@ -138,8 +139,8 @@
                 <select id="messageProtocol" aria-describedby="messageProtocolHelp">
                   <option value="TCP">TCP · Transporte confiable</option><option value="UDP">UDP · Datagrama rápido</option><option value="HTTP">HTTP · Web</option><option value="HTTPS">HTTPS · Web segura</option><option value="ICMP">ICMP · Ping / diagnóstico</option><option value="DNS">DNS · Resolución de nombres</option><option value="DHCP">DHCP · Asignación de IP</option><option value="FTP">FTP · Transferencia de archivos</option><option value="SMTP">SMTP · Correo electrónico</option><option value="SSH">SSH · Acceso remoto</option><option value="ARP">ARP · Resolución IP/MAC</option><option value="ETHERNET">Ethernet · Trama LAN</option>
                 </select>
-                <small id="messageProtocolHelp" class="message-protocol-note">TCP: entrega confiable, ordenada y con confirmación.</small>
               </label>
+              <small id="messageProtocolHelp" class="message-protocol-note protocol-note-wide">TCP: entrega confiable, ordenada y con confirmación.</small>
             </div>
             <label>Mensaje<textarea id="senderMessage" maxlength="140" placeholder="Escribe un mensaje para transmitir…" required></textarea></label>
             <div class="message-meta"><span>Estado inicial: En tránsito</span><span id="messageCounter">0/140</span></div>
