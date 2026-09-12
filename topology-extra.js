@@ -37,6 +37,7 @@
     serial: 'Serial'
   };
 
+  const baseIds = new Set(['pc1', 'r1', 'sw1', 'srv', 'ap']);
   let counter = 10;
   let selected = null;
   let connectMode = false;
@@ -49,8 +50,11 @@
   compactBar.className = 'topology-compact-bar';
   compactBar.innerHTML = `
     <div class="compact-toolbar-title">
-      <strong>Herramientas de topología</strong>
-      <small>Agrega equipos, crea enlaces y prueba comunicación sin mover la página.</small>
+      <div>
+        <strong>Herramientas de topología</strong>
+        <small>Agrega equipos, crea enlaces reales y prueba comunicación.</small>
+      </div>
+      <span class="topology-tip">Tip: un equipo nuevo necesita enlace antes de hacer ping.</span>
     </div>
 
     <div class="compact-group compact-add">
@@ -83,8 +87,25 @@
         </select>
         <button class="compact-action primary" id="extraCreateLink" type="button">Crear enlace</button>
       </div>
-      <button class="compact-action subtle map-connect" id="extraConnect" type="button">O elegir 2 equipos en el mapa</button>
-      <span class="compact-feedback" id="linkFeedback">Primero conecta el equipo nuevo; después podrás hacer ping.</span>
+      <button class="compact-action subtle map-connect" id="extraConnect" type="button">Elegir 2 equipos en el mapa</button>
+      <span class="compact-feedback" id="linkFeedback">Las conexiones se validan según tipo de equipo y cable.</span>
+    </div>
+
+    <div class="compact-group compact-manage">
+      <span class="compact-title">Modificar conexión</span>
+      <select id="existingLink" aria-label="Enlace existente"></select>
+      <div class="inline-controls manage-controls">
+        <select id="editCable" aria-label="Nuevo tipo de cable">
+          <option value="utp-directo">UTP directo</option>
+          <option value="utp-cruzado">UTP cruzado</option>
+          <option value="fibra">Fibra óptica</option>
+          <option value="wifi">WiFi</option>
+          <option value="serial">Serial</option>
+        </select>
+        <button class="compact-action" id="updateLink" type="button">Actualizar</button>
+        <button class="compact-action danger" id="deleteLink" type="button">Eliminar</button>
+      </div>
+      <span class="compact-feedback" id="manageFeedback">Puedes cambiar el cable o borrar un enlace.</span>
     </div>
 
     <div class="compact-group compact-ping">
@@ -102,7 +123,10 @@
       <span class="compact-title">Seleccionado</span>
       <strong id="selectedName">Haz clic en un equipo</strong>
       <small id="selectedNet">IP / máscara / gateway</small>
-      <button class="compact-action subtle" id="openInspector" type="button">Editar IP</button>
+      <div class="selected-actions">
+        <button class="compact-action subtle" id="openInspector" type="button">Editar IP</button>
+        <button class="compact-action danger" id="deleteDevice" type="button">Eliminar</button>
+      </div>
     </div>
 
     <p class="compact-note"><strong>Dato rápido:</strong> TCP y UDP son protocolos de transporte. Ethernet representa la comunicación LAN y UTP es el cable físico.</p>`;
@@ -124,6 +148,7 @@
     </div>
     <div class="inspector-actions">
       <button class="compact-action primary" id="extraSave" type="button">Guardar cambios</button>
+      <button class="compact-action danger" id="deleteDeviceFromPanel" type="button">Eliminar dispositivo</button>
       <span class="extra-feedback" id="extraFeedback">Selecciona un dispositivo para editarlo.</span>
     </div>`;
   workspaceWrap.appendChild(inspector);
@@ -140,12 +165,18 @@
   const linkFrom = compactBar.querySelector('#linkFrom');
   const linkTo = compactBar.querySelector('#linkTo');
   const linkFeedback = compactBar.querySelector('#linkFeedback');
+  const existingLink = compactBar.querySelector('#existingLink');
+  const editCable = compactBar.querySelector('#editCable');
+  const updateLinkBtn = compactBar.querySelector('#updateLink');
+  const deleteLinkBtn = compactBar.querySelector('#deleteLink');
+  const manageFeedback = compactBar.querySelector('#manageFeedback');
   const pingOrigin = compactBar.querySelector('#extraOrigin');
   const pingDestination = compactBar.querySelector('#extraDestination');
   const pingBtn = compactBar.querySelector('#extraPing');
   const selectedName = compactBar.querySelector('#selectedName');
   const selectedNet = compactBar.querySelector('#selectedNet');
   const openInspector = compactBar.querySelector('#openInspector');
+  const deleteDeviceBtn = compactBar.querySelector('#deleteDevice');
   const closeInspector = inspector.querySelector('#closeInspector');
   const inspectorTitle = inspector.querySelector('#inspectorTitle');
   const nameInput = inspector.querySelector('#extraName');
@@ -153,6 +184,7 @@
   const maskInput = inspector.querySelector('#extraMask');
   const gatewayInput = inspector.querySelector('#extraGateway');
   const saveBtn = inspector.querySelector('#extraSave');
+  const deleteDeviceFromPanel = inspector.querySelector('#deleteDeviceFromPanel');
   const feedback = inspector.querySelector('#extraFeedback');
 
   const initialLinks = [
@@ -168,6 +200,17 @@
 
   function getNode(id) {
     return document.getElementById(id);
+  }
+
+  function getKind(id) {
+    const node = getNode(id);
+    if (!node) return 'pc';
+    if (node.dataset.kind) return node.dataset.kind;
+    if (id === 'r1' || node.classList.contains('router')) return 'router';
+    if (id === 'sw1' || node.classList.contains('switch')) return 'switch';
+    if (id === 'srv' || node.classList.contains('server')) return 'server';
+    if (id === 'ap' || node.classList.contains('ap')) return 'ap';
+    return 'pc';
   }
 
   function nodeLabel(id) {
@@ -188,6 +231,11 @@
   function setLinkFeedback(text, ok = null) {
     linkFeedback.textContent = text;
     linkFeedback.className = `compact-feedback ${ok === true ? 'ok' : ok === false ? 'bad' : ''}`;
+  }
+
+  function setManageFeedback(text, ok = null) {
+    manageFeedback.textContent = text;
+    manageFeedback.className = `compact-feedback ${ok === true ? 'ok' : ok === false ? 'bad' : ''}`;
   }
 
   function getPercent(node) {
@@ -212,18 +260,27 @@
     links.forEach(updateLine);
   }
 
+  function decorateLine(line, type) {
+    line.classList.remove('wifi', 'fibra', 'serial', 'utp-cruzado');
+    line.classList.toggle('wifi', type === 'wifi');
+    line.classList.toggle('fibra', type === 'fibra');
+    line.classList.toggle('serial', type === 'serial');
+    line.classList.toggle('utp-cruzado', type === 'utp-cruzado');
+    line.dataset.cable = type;
+  }
+
   function registerInitialLinks() {
     const lines = Array.from(svg.querySelectorAll('line'));
     initialLinks.forEach(([a, b, type], index) => {
       const line = lines[index];
       if (!line) return;
       line.dataset.extraLink = `${a}-${b}`;
-      line.dataset.cable = type;
       line.classList.add('extra-link');
-      line.classList.toggle('wifi', type === 'wifi');
+      decorateLine(line, type);
       links.push({ a, b, type, line });
     });
     updateAllLines();
+    updateLinkManager();
   }
 
   function fillSelect(select, options, previous) {
@@ -238,6 +295,26 @@
     if (first.value === second.value && nodes.length > 1) {
       second.value = nodes.find(n => n.id !== first.value)?.id || nodes[0].id;
     }
+  }
+
+  function updateLinkManager(keepValue = existingLink.value) {
+    if (!links.length) {
+      existingLink.innerHTML = '<option value="">Sin enlaces</option>';
+      updateLinkBtn.disabled = true;
+      deleteLinkBtn.disabled = true;
+      return;
+    }
+
+    existingLink.innerHTML = links.map((link, index) => {
+      return `<option value="${index}">${nodeLabel(link.a)} ↔ ${nodeLabel(link.b)} · ${cableNames[link.type]}</option>`;
+    }).join('');
+
+    const index = Number(keepValue);
+    if (Number.isInteger(index) && links[index]) existingLink.value = String(index);
+    updateLinkBtn.disabled = false;
+    deleteLinkBtn.disabled = false;
+    const active = links[Number(existingLink.value)] || links[0];
+    if (active) editCable.value = active.type;
   }
 
   function updateSelects(preferredId = null) {
@@ -258,6 +335,7 @@
 
     avoidSamePair(linkFrom, linkTo);
     avoidSamePair(pingOrigin, pingDestination);
+    updateLinkManager();
   }
 
   function makeIcon(type) {
@@ -300,7 +378,7 @@
     bindNode(node);
     updateSelects(id);
     selectNode(node, false);
-    setLinkFeedback(`${node.dataset.name} agregado. Elige a qué equipo conectarlo y presiona “Crear enlace”.`);
+    setLinkFeedback(`${node.dataset.name} agregado. Conéctalo con un switch, router o AP para poder hacer ping.`);
     addLog('Dispositivo agregado', `${node.dataset.name} con IP ${ip}.`, 'success');
   }
 
@@ -319,7 +397,7 @@
     ipInput.value = node.dataset.ip || '';
     maskInput.value = mask;
     gatewayInput.value = gateway;
-    feedback.textContent = 'Listo para editar. Se validará IP, máscara y gateway.';
+    feedback.textContent = baseIds.has(node.id) ? 'Equipo base: puedes editar IP, pero no eliminarlo.' : 'Puedes editarlo o eliminarlo.';
     feedback.className = 'extra-feedback';
 
     if (open) inspector.classList.remove('hidden');
@@ -382,10 +460,55 @@
     addLog('Configuración guardada', `${name}: ${ip} / ${mask}`, 'success');
   }
 
+  function validateConnection(a, b, type) {
+    if (!a || !b) return { ok: false, msg: 'Selecciona dos dispositivos para conectar.' };
+    if (a === b) return { ok: false, msg: 'No puedes conectar un equipo consigo mismo.' };
+
+    const ka = getKind(a);
+    const kb = getKind(b);
+    const kinds = [ka, kb];
+    const has = (...items) => items.some(item => kinds.includes(item));
+    const both = item => ka === item && kb === item;
+    const endDevices = ['pc', 'laptop', 'phone', 'server'];
+    const networkDevices = ['switch', 'router', 'ap'];
+    const aEnd = endDevices.includes(ka);
+    const bEnd = endDevices.includes(kb);
+    const aNet = networkDevices.includes(ka);
+    const bNet = networkDevices.includes(kb);
+
+    if (type === 'wifi') {
+      if (has('ap') && (has('phone') || has('laptop'))) return { ok: true };
+      return { ok: false, msg: 'WiFi úsalo entre un Access Point y un celular/notebook.' };
+    }
+
+    if (type === 'serial') {
+      if (both('router')) return { ok: true };
+      return { ok: false, msg: 'Serial normalmente se usa entre routers.' };
+    }
+
+    if (type === 'fibra') {
+      if ((ka === 'switch' && ['switch', 'router', 'server'].includes(kb)) || (kb === 'switch' && ['switch', 'router', 'server'].includes(ka)) || both('router')) return { ok: true };
+      return { ok: false, msg: 'Fibra queda más realista entre switch, router o servidor.' };
+    }
+
+    if (type === 'utp-directo') {
+      if ((aEnd && bNet) || (bEnd && aNet) || kinds.includes('switch') || kinds.includes('ap')) return { ok: true };
+      return { ok: false, msg: 'UTP directo va mejor de equipo final a switch/router/AP.' };
+    }
+
+    if (type === 'utp-cruzado') {
+      if ((aEnd && bEnd) || both('router') || both('switch') || (has('router') && has('pc'))) return { ok: true };
+      return { ok: false, msg: 'UTP cruzado se usa para equipos similares o PC ↔ router.' };
+    }
+
+    return { ok: true };
+  }
+
   function bindNode(node) {
     node.dataset.name ||= node.querySelector('strong')?.textContent || node.id;
     node.dataset.mask ||= '255.255.255.0';
     node.dataset.gateway ||= '192.168.10.1';
+    node.dataset.kind ||= getKind(node.id);
 
     node.addEventListener('click', (event) => {
       if (connectMode) {
@@ -469,8 +592,8 @@
   }
 
   function createLink(a, b, type) {
-    if (!a || !b) return setLinkFeedback('Selecciona dos dispositivos para conectar.', false);
-    if (a === b) return setLinkFeedback('No puedes conectar un equipo consigo mismo.', false);
+    const validation = validateConnection(a, b, type);
+    if (!validation.ok) return setLinkFeedback(validation.msg, false);
 
     const exists = links.some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
     if (exists) {
@@ -480,18 +603,71 @@
 
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.classList.add('extra-link');
-    line.classList.toggle('wifi', type === 'wifi');
-    line.classList.toggle('fibra', type === 'fibra');
-    line.classList.toggle('serial', type === 'serial');
-    line.dataset.cable = type;
+    decorateLine(line, type);
     svg.appendChild(line);
 
     const link = { a, b, type, line };
     links.push(link);
     updateLine(link);
     updateSelects();
+    updateLinkManager(String(links.length - 1));
     setLinkFeedback(`Conexión creada: ${nodeLabel(a)} ↔ ${nodeLabel(b)} por ${cableNames[type]}.`, true);
     addLog('Enlace creado', `${nodeLabel(a)} ↔ ${nodeLabel(b)} por ${cableNames[type]}.`, 'success');
+  }
+
+  function updateSelectedLink() {
+    const index = Number(existingLink.value);
+    const link = links[index];
+    if (!link) return setManageFeedback('Selecciona un enlace válido.', false);
+
+    const nextType = editCable.value;
+    const validation = validateConnection(link.a, link.b, nextType);
+    if (!validation.ok) return setManageFeedback(validation.msg, false);
+
+    link.type = nextType;
+    decorateLine(link.line, nextType);
+    updateLinkManager(String(index));
+    setManageFeedback(`Enlace actualizado a ${cableNames[nextType]}.`, true);
+    addLog('Enlace actualizado', `${nodeLabel(link.a)} ↔ ${nodeLabel(link.b)} ahora usa ${cableNames[nextType]}.`, 'success');
+  }
+
+  function deleteSelectedLink() {
+    const index = Number(existingLink.value);
+    const link = links[index];
+    if (!link) return setManageFeedback('Selecciona un enlace para eliminar.', false);
+
+    link.line?.remove();
+    links.splice(index, 1);
+    updateLinkManager();
+    setManageFeedback('Enlace eliminado correctamente.', true);
+    addLog('Enlace eliminado', `${nodeLabel(link.a)} ↔ ${nodeLabel(link.b)} fue desconectado.`, 'info');
+  }
+
+  function deleteSelectedDevice() {
+    if (!selected) return showFeedback('Selecciona un dispositivo primero.', false);
+    if (baseIds.has(selected.id)) {
+      const msg = 'Los equipos base quedan fijos para no romper la simulación principal.';
+      showFeedback(msg, false);
+      setLinkFeedback(msg, false);
+      return;
+    }
+
+    const id = selected.id;
+    const name = selected.dataset.name || id;
+    links = links.filter(link => {
+      const keep = link.a !== id && link.b !== id;
+      if (!keep) link.line?.remove();
+      return keep;
+    });
+    selected.remove();
+    selected = null;
+    inspector.classList.add('hidden');
+    selectedName.textContent = 'Haz clic en un equipo';
+    selectedNet.textContent = 'IP / máscara / gateway';
+    updateSelects();
+    updateLinkManager();
+    setLinkFeedback(`${name} eliminado junto con sus enlaces.`, true);
+    addLog('Dispositivo eliminado', `${name} y sus conexiones fueron retirados.`, 'info');
   }
 
   function buildGraph() {
@@ -572,13 +748,19 @@
   });
 
   createLinkBtn.addEventListener('click', () => createLink(linkFrom.value, linkTo.value, cableSelect.value));
+  updateLinkBtn.addEventListener('click', updateSelectedLink);
+  deleteLinkBtn.addEventListener('click', deleteSelectedLink);
+  existingLink.addEventListener('change', () => {
+    const link = links[Number(existingLink.value)];
+    if (link) editCable.value = link.type;
+  });
 
   connectBtn.addEventListener('click', () => {
     connectMode = !connectMode;
     firstConnect?.classList.remove('connect-pick');
     firstConnect = null;
     connectBtn.classList.toggle('active', connectMode);
-    connectBtn.textContent = connectMode ? 'Modo mapa activo' : 'O elegir 2 equipos en el mapa';
+    connectBtn.textContent = connectMode ? 'Modo mapa activo' : 'Elegir 2 equipos en el mapa';
     simState && (simState.textContent = connectMode ? 'Haz clic en dos dispositivos' : 'Ruta lista');
     setLinkFeedback(connectMode ? 'Modo mapa activo: haz clic en el primer equipo y luego en el segundo.' : 'También puedes crear enlaces usando los selectores de arriba.');
   });
@@ -589,6 +771,8 @@
   pingDestination.addEventListener('change', () => avoidSamePair(pingOrigin, pingDestination));
 
   saveBtn.addEventListener('click', saveSelected);
+  deleteDeviceBtn.addEventListener('click', deleteSelectedDevice);
+  deleteDeviceFromPanel.addEventListener('click', deleteSelectedDevice);
   openInspector.addEventListener('click', () => {
     if (!selected) {
       const first = currentNodes()[0];
