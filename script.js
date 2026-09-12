@@ -9,7 +9,53 @@ const protocol = document.getElementById('protocol');
 const cards = document.querySelectorAll('.device-card');
 const nodes = document.querySelectorAll('.node');
 
-/* Completa algunos elementos visuales sin obligar a tocar el HTML base. */
+const protocolOptions = [
+  ['ICMP','ICMP · Ping / diagnóstico'],
+  ['TCP','TCP · Transporte confiable'],
+  ['UDP','UDP · Datagrama rápido'],
+  ['HTTP','HTTP · Web'],
+  ['HTTPS','HTTPS · Web segura'],
+  ['DNS','DNS · Resolución de nombres'],
+  ['DHCP','DHCP · Asignación de IP'],
+  ['FTP','FTP · Transferencia de archivos'],
+  ['SMTP','SMTP · Correo electrónico'],
+  ['SSH','SSH · Acceso remoto'],
+  ['ARP','ARP · Resolución IP/MAC'],
+  ['ETHERNET','Ethernet · Trama LAN']
+];
+
+const protocolProfiles = {
+  ICMP:{base:10,hop:3,jitter:2,note:'ICMP se usa principalmente para diagnóstico y mensajes de control.'},
+  TCP:{base:24,hop:5,jitter:4,note:'TCP confirma la entrega, mantiene el orden y retransmite si es necesario.'},
+  UDP:{base:12,hop:3,jitter:6,note:'UDP prioriza rapidez: envía datagramas sin confirmar cada entrega.'},
+  HTTP:{base:34,hop:5,jitter:7,note:'HTTP transporta solicitudes y respuestas web sin cifrado propio.'},
+  HTTPS:{base:46,hop:6,jitter:8,note:'HTTPS agrega cifrado TLS a la comunicación web.'},
+  DNS:{base:20,hop:4,jitter:5,note:'DNS traduce nombres de dominio a direcciones IP.'},
+  DHCP:{base:29,hop:5,jitter:7,note:'DHCP permite asignar parámetros de red automáticamente.'},
+  FTP:{base:42,hop:6,jitter:8,note:'FTP está orientado a la transferencia de archivos.'},
+  SMTP:{base:39,hop:5,jitter:7,note:'SMTP se utiliza para el envío de correo electrónico.'},
+  SSH:{base:36,hop:5,jitter:5,note:'SSH permite administrar equipos de forma remota y cifrada.'},
+  ARP:{base:8,hop:2,jitter:2,note:'ARP relaciona una dirección IPv4 con una dirección MAC dentro de la LAN.'},
+  ETHERNET:{base:5,hop:1,jitter:1,note:'Ethernet define el intercambio de tramas en una red local.'}
+};
+
+protocol.innerHTML = protocolOptions.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
+
+const protocolHelp = document.createElement('p');
+protocolHelp.className = 'protocol-help';
+protocolHelp.innerHTML = '<strong>Dato:</strong> UDP y TCP son protocolos de transporte. UTP, en cambio, es un tipo de cableado; por eso aquí usamos Ethernet para representar la comunicación LAN.';
+protocol.insertAdjacentElement('afterend', protocolHelp);
+
+const helperStyle = document.createElement('style');
+helperStyle.textContent = `
+  .protocol-help{margin:9px 0 0;color:#71899a;font-size:9px;line-height:1.45}
+  .protocol-help strong{color:#375a70}
+  .sim-telemetry{grid-template-columns:repeat(5,minmax(76px,1fr))!important}
+  @media(max-width:820px){.sim-telemetry{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+  @media(max-width:520px){.sim-telemetry{grid-template-columns:1fr!important}}
+`;
+document.head.appendChild(helperStyle);
+
 const rawLines = [...document.querySelectorAll('.links line')];
 ['pc1-r1','r1-sw1','r1-ap','sw1-srv'].forEach((name,index)=>{
   if(rawLines[index]) rawLines[index].dataset.link=name;
@@ -21,16 +67,19 @@ if(!telemetry){
   telemetry = document.createElement('div');
   telemetry.className='sim-telemetry';
   telemetry.innerHTML=`
-    <div><small>PROTOCOLO</small><strong id="packetProtocol">${protocol.value}</strong></div>
+    <div><small>PROTOCOLO</small><strong id="packetProtocol">${protocol.options[protocol.selectedIndex].textContent}</strong></div>
     <div><small>SALTOS</small><strong id="hopLabel">0 saltos</strong></div>
+    <div><small>LATENCIA SIM.</small><strong id="simLatency">—</strong></div>
+    <div><small>JITTER SIM.</small><strong id="simJitter">—</strong></div>
     <div><small>ESTADO</small><strong id="packetStatus">Preparado</strong></div>`;
   document.querySelector('.sim-controls')?.prepend(telemetry);
 }
 const hopLabel = document.getElementById('hopLabel');
 const packetProtocol = document.getElementById('packetProtocol');
 const packetStatus = document.getElementById('packetStatus');
+const simLatency = document.getElementById('simLatency');
+const simJitter = document.getElementById('simJitter');
 
-/* Selectores reales de origen y destino */
 const devicePanel = document.querySelector('.device-panel');
 let routeChooser = document.getElementById('routeChooser');
 if(!routeChooser && devicePanel){
@@ -57,7 +106,6 @@ if(!routeChooser && devicePanel){
 const originSelect = document.getElementById('originSelect');
 const destinationSelect = document.getElementById('destinationSelect');
 
-/* El recurso ya no se presenta como una malla: es la página DIFTEL. */
 document.querySelectorAll('a[href="https://diftel.josnic.cl/"]').forEach(link=>{
   const strong=link.querySelector('strong');
   if(strong) strong.textContent='Página DIFTEL';
@@ -86,14 +134,10 @@ const graph = {
 };
 
 const linkMap = {
-  'pc1-r1': 'pc1-r1',
-  'r1-pc1': 'pc1-r1',
-  'r1-sw1': 'r1-sw1',
-  'sw1-r1': 'r1-sw1',
-  'sw1-srv': 'sw1-srv',
-  'srv-sw1': 'sw1-srv',
-  'r1-ap': 'r1-ap',
-  'ap-r1': 'r1-ap'
+  'pc1-r1': 'pc1-r1','r1-pc1': 'pc1-r1',
+  'r1-sw1': 'r1-sw1','sw1-r1': 'r1-sw1',
+  'sw1-srv': 'sw1-srv','srv-sw1': 'sw1-srv',
+  'r1-ap': 'r1-ap','ap-r1': 'r1-ap'
 };
 
 function getNode(id){ return document.getElementById(id); }
@@ -115,6 +159,15 @@ function shortestRoute(start,end){
     }
   }
   return [];
+}
+
+function simulatedMetrics(route){
+  const profile = protocolProfiles[protocol.value] || protocolProfiles.ICMP;
+  const hops = Math.max(route.length - 1, 1);
+  const variation = Math.max(1, Math.round(Math.random() * profile.jitter));
+  const direction = Math.random() > .5 ? 1 : -1;
+  const latency = Math.max(1, Math.round(profile.base + profile.hop * hops + direction * variation));
+  return {latency, jitter:variation, profile};
 }
 
 function wait(ms, token){
@@ -161,13 +214,14 @@ function updateRouteUI(){
 
   originLabel.textContent=nodeName(origin);
   destinationLabel.textContent=nodeName(destination);
-
   document.querySelector(`.device-card[data-device="${destination}"]`)?.classList.add('active');
   getNode(origin)?.classList.add('hop-done');
   getNode(destination)?.classList.add('selected');
 
   const route=shortestRoute(origin,destination);
   hopLabel.textContent=route.length>1?`${route.length-1} saltos`:'0 saltos';
+  simLatency.textContent='—';
+  simJitter.textContent='—';
 
   if(origin===destination){
     simState.textContent='Origen y destino no pueden ser iguales';
@@ -226,7 +280,9 @@ nodes.forEach(node=>node.addEventListener('click',()=>{
 }));
 
 protocol.addEventListener('change',()=>{
-  packetProtocol.textContent=protocol.value;
+  packetProtocol.textContent=protocol.options[protocol.selectedIndex].textContent;
+  simLatency.textContent='—';
+  simJitter.textContent='—';
   if(!running) packetStatus.textContent='Protocolo actualizado';
 });
 
@@ -247,6 +303,7 @@ async function sendPacket(){
   const route=shortestRoute(origin,destination);
   if(route.length<2){simState.textContent='No se encontró una ruta válida';return;}
 
+  const metrics=simulatedMetrics(route);
   const token=++generation;
   running=true;
   clearRouteHighlights();
@@ -254,13 +311,15 @@ async function sendPacket(){
   sendBtn.disabled=true;
   sendBtn.textContent='Transmitiendo…';
   simState.textContent='Encapsulando paquete';
-  packetProtocol.textContent=protocol.value;
+  packetProtocol.textContent=protocol.options[protocol.selectedIndex].textContent;
   packetStatus.textContent='En tránsito';
   hopLabel.textContent=`0 / ${route.length-1}`;
+  simLatency.textContent=`${metrics.latency} ms`;
+  simJitter.textContent=`±${metrics.jitter} ms`;
   setPacketAt(origin);
   packet.classList.add('active');
   getNode(origin)?.classList.add('hop-done');
-  addEvent(1,nodeName(origin),`${protocol.value}: paquete creado con destino ${nodeName(destination)}.`,'info');
+  addEvent(1,nodeName(origin),`${protocol.value}: paquete creado con destino ${nodeName(destination)}. ${metrics.profile.note}`,'info');
 
   try{
     await wait(260,token);
@@ -278,7 +337,7 @@ async function sendPacket(){
       node?.classList.remove('hop-active');
       node?.classList.add('hop-done');
       const isLast=i===route.length-1;
-      addEvent(i+1,nodeName(to),isLast?'Paquete recibido correctamente.':'Paquete procesado y reenviado.',isLast?'success':'normal');
+      addEvent(i+1,nodeName(to),isLast?`Paquete recibido. Latencia simulada ${metrics.latency} ms, jitter ±${metrics.jitter} ms.`:'Paquete procesado y reenviado.',isLast?'success':'normal');
       await wait(140,token);
     }
     if(token!==generation)return;
@@ -302,7 +361,7 @@ function resetSimulation(){
   if(destinationSelect) destinationSelect.value=destination;
   eventList.innerHTML='<div class="event neutral"><span>00</span><p><strong>Sistema</strong><small>Esperando una transmisión…</small></p></div>';
   sendBtn.textContent='Enviar paquete';
-  packetProtocol.textContent=protocol.value;
+  packetProtocol.textContent=protocol.options[protocol.selectedIndex].textContent;
   updateRouteUI();
 }
 
