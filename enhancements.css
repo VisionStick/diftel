@@ -17,6 +17,7 @@
 @keyframes packetPulse{50%{transform:scale(1.45)}}
 .event-list{max-height:480px;overflow:auto;padding-right:2px}.event.info{border-color:rgba(37,212,242,.24)}.event.info>span{color:#6ee9ff;background:rgba(37,212,242,.1)}
 .sim-controls{flex-wrap:wrap}.sim-telemetry{display:grid;grid-template-columns:repeat(3,minmax(85px,1fr));gap:8px;flex:1;min-width:300px}.sim-telemetry>div{padding:9px 11px;border:1px solid #163e5b;border-radius:10px;background:#071827}.sim-telemetry small{display:block;font:8px JetBrains Mono,monospace;color:#587a91;letter-spacing:.11em}.sim-telemetry strong{display:block;margin-top:5px;font-size:10px;color:#cde1ec}.route-info{margin-left:auto}
+.route-chooser{margin-top:4px}.route-chooser .route-destination-label{margin-top:11px}.route-chooser select{margin-bottom:2px;background:#0a2034;border-color:#1b4a6c}.route-chooser select:focus{outline:none;border-color:#25d4f2;box-shadow:0 0 0 3px rgba(37,212,242,.08)}
 
 /* Mensajería */
 .message-section,.game-section{padding:78px 0}
