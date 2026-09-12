@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, push, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBztc4ll_GsLPnOwdh5dAV2CaZB3806Wx0",
@@ -63,6 +63,7 @@ document.head.appendChild(runtimeStyle);
 
 let activeMessageUnsubscribe = null;
 let currentMessageKey = null;
+let currentLocalMetrics = {};
 
 let receipt = document.getElementById("deliveryReceipt");
 if (!receipt && stage) {
@@ -76,275 +77,158 @@ const receiptText = document.getElementById("deliveryReceiptText");
 const metricsBox = document.getElementById("deliveryMetrics");
 
 function updateCounter() { counter.textContent = `${messageInput.value.length}/140`; }
+function stopWatchingCurrentMessage(){ if(activeMessageUnsubscribe){activeMessageUnsubscribe();activeMessageUnsubscribe=null;} }
+function clearBurst(){ stage?.querySelectorAll(".delivery-burst-dot").forEach(dot=>dot.remove()); }
 
-function stopWatchingCurrentMessage() {
-  if (activeMessageUnsubscribe) {
-    activeMessageUnsubscribe();
-    activeMessageUnsubscribe = null;
-  }
-}
-
-function clearBurst() { stage?.querySelectorAll(".delivery-burst-dot").forEach(dot => dot.remove()); }
-
-function deliveryBurst() {
-  if (!stage) return;
+function deliveryBurst(){
+  if(!stage) return;
   clearBurst();
-  const pieces = 18;
-  for (let i = 0; i < pieces; i++) {
-    const dot = document.createElement("span");
-    dot.className = "delivery-burst-dot";
-    const angle = (Math.PI * 2 * i) / pieces;
-    const distance = 58 + Math.random() * 42;
-    dot.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
-    dot.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
-    dot.style.setProperty("--rot", `${Math.round(Math.random() * 220 - 110)}deg`);
+  for(let i=0;i<18;i++){
+    const dot=document.createElement("span");
+    dot.className="delivery-burst-dot";
+    const angle=(Math.PI*2*i)/18;
+    const distance=58+Math.random()*42;
+    dot.style.setProperty("--dx",`${Math.cos(angle)*distance}px`);
+    dot.style.setProperty("--dy",`${Math.sin(angle)*distance}px`);
+    dot.style.setProperty("--rot",`${Math.round(Math.random()*220-110)}deg`);
     stage.appendChild(dot);
-    setTimeout(() => dot.remove(), 1000);
+    setTimeout(()=>dot.remove(),1000);
   }
 }
 
-function shortMessageNumber(key = "") { return key.slice(-6).toUpperCase() || "------"; }
-
-function formatClock(timestamp) {
-  if (!timestamp) return "ahora";
-  return new Date(timestamp).toLocaleTimeString("es-CL", {hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
+function shortMessageNumber(key=""){return key.slice(-6).toUpperCase()||"------";}
+function formatClock(timestamp){
+  if(!timestamp) return "ahora";
+  return new Date(timestamp).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
 }
-
-function formatDuration(start, end) {
-  if (!start || !end || end < start) return "tiempo no disponible";
-  const totalSeconds = Math.max(0, Math.round((end - start) / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) return `${hours} h ${String(minutes).padStart(2,"0")} min ${String(seconds).padStart(2,"0")} s`;
-  if (minutes > 0) return `${minutes} min ${String(seconds).padStart(2,"0")} s`;
+function formatDuration(start,end){
+  if(!start||!end||end<start) return "tiempo no disponible";
+  const totalSeconds=Math.max(0,Math.round((end-start)/1000));
+  const hours=Math.floor(totalSeconds/3600);
+  const minutes=Math.floor((totalSeconds%3600)/60);
+  const seconds=totalSeconds%60;
+  if(hours>0) return `${hours} h ${String(minutes).padStart(2,"0")} min ${String(seconds).padStart(2,"0")} s`;
+  if(minutes>0) return `${minutes} min ${String(seconds).padStart(2,"0")} s`;
   return `${seconds} s`;
 }
-
-function networkInfo() {
-  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+function networkInfo(){
+  const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
   return {
-    effectiveType: connection?.effectiveType || "no disponible",
-    browserRttMs: Number.isFinite(connection?.rtt) ? connection.rtt : null,
-    downlinkMbps: Number.isFinite(connection?.downlink) ? connection.downlink : null
+    effectiveType:connection?.effectiveType||"no disponible",
+    browserRttMs:Number.isFinite(connection?.rtt)?connection.rtt:null,
+    downlinkMbps:Number.isFinite(connection?.downlink)?connection.downlink:null
   };
 }
-
-function metricCard(label, value) {
-  return `<div class="delivery-metric"><small>${label}</small><strong>${value}</strong></div>`;
-}
-
-function renderMetrics(data = {}, delivered = false) {
-  if (!metricsBox) return;
-  const latency = Number.isFinite(data.firebaseWriteMs) ? `${data.firebaseWriteMs} ms` : "—";
-  const variation = Number.isFinite(data.networkVariationMs) ? `${data.networkVariationMs} ms` : "—";
-  const rtt = Number.isFinite(data.browserRttMs) ? `≈ ${data.browserRttMs} ms` : "N/D";
-  const wait = delivered ? formatDuration(data.createdAt, data.deliveredAt) : "esperando";
-  metricsBox.innerHTML = [
-    metricCard("LATENCIA FIREBASE", latency),
-    metricCard("VARIACIÓN OBS.", variation),
-    metricCard("RTT NAVEGADOR", rtt),
-    metricCard("PROTOCOLO", data.protocol || "—"),
-    metricCard("RED", data.effectiveType || "—"),
-    metricCard("ACEPTACIÓN", wait)
+function metricCard(label,value){return `<div class="delivery-metric"><small>${label}</small><strong>${value}</strong></div>`;}
+function mergedMetrics(data={}){return {...data,...currentLocalMetrics};}
+function renderMetrics(data={},delivered=false){
+  if(!metricsBox) return;
+  const m=mergedMetrics(data);
+  metricsBox.innerHTML=[
+    metricCard("LATENCIA FIREBASE",Number.isFinite(m.firebaseWriteMs)?`${m.firebaseWriteMs} ms`:"—"),
+    metricCard("VARIACIÓN OBS.",Number.isFinite(m.networkVariationMs)?`${m.networkVariationMs} ms`:"—"),
+    metricCard("RTT NAVEGADOR",Number.isFinite(m.browserRttMs)?`≈ ${m.browserRttMs} ms`:"N/D"),
+    metricCard("PROTOCOLO",m.protocol||"—"),
+    metricCard("RED",m.effectiveType||"—"),
+    metricCard("ACEPTACIÓN",delivered?formatDuration(m.createdAt,m.deliveredAt):"esperando")
   ].join("");
 }
 
-function resetStage() {
-  stopWatchingCurrentMessage();
-  currentMessageKey = null;
-  clearBurst();
-  stage.className = "delivery-stage";
-  badge.className = "transmission-badge";
-  badge.textContent = "ESPERA";
-  deliveryTitle.textContent = "Listo para transmitir";
-  deliveryText.textContent = "Tu mensaje viajará por la red y podrás ver cuando sea confirmado por administración.";
-  deliveryPointServer.classList.remove("active", "done");
-  deliveryPointDb.classList.remove("active", "done");
-  receipt?.classList.remove("show");
-  if (receiptText) receiptText.textContent = "Esperando confirmación…";
-  if (metricsBox) metricsBox.innerHTML = "";
+function resetStage(){
+  stopWatchingCurrentMessage();currentMessageKey=null;currentLocalMetrics={};clearBurst();
+  stage.className="delivery-stage";badge.className="transmission-badge";badge.textContent="ESPERA";
+  deliveryTitle.textContent="Listo para transmitir";
+  deliveryText.textContent="Tu mensaje viajará por la red y podrás ver cuando sea confirmado por administración.";
+  deliveryPointServer.classList.remove("active","done");deliveryPointDb.classList.remove("active","done");
+  receipt?.classList.remove("show");if(receiptText) receiptText.textContent="Esperando confirmación…";if(metricsBox) metricsBox.innerHTML="";
 }
-
-function beginStage() {
-  clearBurst();
-  stage.className = "delivery-stage is-sending";
-  badge.className = "transmission-badge sending";
-  badge.textContent = "ENVIANDO";
-  deliveryTitle.textContent = "Mensaje viajando por la red 📩";
-  deliveryText.textContent = "Midiendo el tiempo de escritura y esperando confirmación de Firebase.";
-  deliveryPointServer.classList.add("active");
-  deliveryPointDb.classList.remove("active", "done");
-  receipt?.classList.remove("show");
+function beginStage(){
+  clearBurst();stage.className="delivery-stage is-sending";badge.className="transmission-badge sending";badge.textContent="ENVIANDO";
+  deliveryTitle.textContent="Mensaje viajando por la red 📩";deliveryText.textContent="Midiendo el tiempo de escritura y esperando confirmación de Firebase.";
+  deliveryPointServer.classList.add("active");deliveryPointDb.classList.remove("active","done");receipt?.classList.remove("show");
 }
-
-function storedStage(data = {}) {
-  stage.className = "delivery-stage is-stored";
-  badge.className = "transmission-badge waiting";
-  badge.textContent = "EN ESPERA";
-  deliveryTitle.textContent = "Mensaje recibido por el sistema";
-  deliveryText.textContent = "Firebase lo guardó correctamente. Ahora esperamos que administración lo marque como entregado.";
-  deliveryPointServer.classList.remove("active");
-  deliveryPointServer.classList.add("done");
-  deliveryPointDb.classList.add("done");
-  receipt?.classList.add("show");
-  if (receiptText) {
-    const number = data.messageNumber || shortMessageNumber(currentMessageKey);
-    receiptText.innerHTML = `Mensaje #${number}<br><span style="font-weight:500;color:#6d8192">Guardado ${formatClock(data.createdAt)} · esperando aceptación</span>`;
-  }
-  renderMetrics(data, false);
+function storedStage(data={}){
+  stage.className="delivery-stage is-stored";badge.className="transmission-badge waiting";badge.textContent="EN ESPERA";
+  deliveryTitle.textContent="Mensaje recibido por el sistema";deliveryText.textContent="Firebase lo guardó correctamente. Ahora esperamos que administración lo marque como entregado.";
+  deliveryPointServer.classList.remove("active");deliveryPointServer.classList.add("done");deliveryPointDb.classList.add("done");receipt?.classList.add("show");
+  const m=mergedMetrics(data);
+  if(receiptText) receiptText.innerHTML=`Mensaje #${m.messageNumber||shortMessageNumber(currentMessageKey)}<br><span style="font-weight:500;color:#6d8192">Guardado ${formatClock(m.createdAt)} · esperando aceptación</span>`;
+  renderMetrics(m,false);
 }
-
-function deliveredStage(data = {}) {
-  stage.className = "delivery-stage is-delivered";
-  badge.className = "transmission-badge success";
-  badge.textContent = "ENTREGADO";
-  deliveryTitle.textContent = "¡Llegó a destino! 🎉";
-  deliveryText.textContent = "Administración confirmó la recepción. La transmisión quedó completada.";
-  deliveryPointServer.classList.remove("active");
-  deliveryPointServer.classList.add("done");
-  deliveryPointDb.classList.add("done");
-  receipt?.classList.add("show");
-
-  if (receiptText) {
-    const number = data.messageNumber || shortMessageNumber(currentMessageKey);
-    receiptText.innerHTML = `Mensaje #${number}<br><span style="font-weight:500;color:#1b7953">Entregado ${formatClock(data.deliveredAt)} · aceptación en ${formatDuration(data.createdAt, data.deliveredAt)}</span>`;
-  }
-  renderMetrics(data, true);
-  feedback.textContent = "Confirmación final recibida: el mensaje fue marcado como entregado.";
-  feedback.className = "message-feedback success";
-  deliveryBurst();
+function deliveredStage(data={}){
+  stage.className="delivery-stage is-delivered";badge.className="transmission-badge success";badge.textContent="ENTREGADO";
+  deliveryTitle.textContent="¡Llegó a destino! 🎉";deliveryText.textContent="Administración confirmó la recepción. La transmisión quedó completada.";
+  deliveryPointServer.classList.remove("active");deliveryPointServer.classList.add("done");deliveryPointDb.classList.add("done");receipt?.classList.add("show");
+  const m=mergedMetrics(data);
+  if(receiptText) receiptText.innerHTML=`Mensaje #${m.messageNumber||shortMessageNumber(currentMessageKey)}<br><span style="font-weight:500;color:#1b7953">Entregado ${formatClock(m.deliveredAt)} · aceptación en ${formatDuration(m.createdAt,m.deliveredAt)}</span>`;
+  renderMetrics(m,true);
+  feedback.textContent="Confirmación final recibida: el mensaje fue marcado como entregado.";feedback.className="message-feedback success";deliveryBurst();
 }
-
-function deletedStage() {
-  stage.className = "delivery-stage";
-  badge.className = "transmission-badge error";
-  badge.textContent = "ELIMINADO";
-  deliveryTitle.textContent = "El mensaje fue retirado";
-  deliveryText.textContent = "Administración eliminó este mensaje antes de completar la entrega.";
-  receipt?.classList.add("show");
-  if (receiptText) receiptText.textContent = "El registro ya no existe en Firebase";
-  if (metricsBox) metricsBox.innerHTML = "";
-  feedback.textContent = "El mensaje fue eliminado por administración.";
-  feedback.className = "message-feedback error";
+function deletedStage(){
+  stage.className="delivery-stage";badge.className="transmission-badge error";badge.textContent="ELIMINADO";
+  deliveryTitle.textContent="El mensaje fue retirado";deliveryText.textContent="Administración eliminó este mensaje antes de completar la entrega.";
+  receipt?.classList.add("show");if(receiptText) receiptText.textContent="El registro ya no existe en Firebase";if(metricsBox) metricsBox.innerHTML="";
+  feedback.textContent="El mensaje fue eliminado por administración.";feedback.className="message-feedback error";
 }
+function errorStage(){stage.className="delivery-stage";badge.className="transmission-badge error";badge.textContent="ERROR";deliveryTitle.textContent="No llegó el mensaje";deliveryText.textContent="La base de datos no confirmó la recepción. Puedes volver a intentarlo.";receipt?.classList.remove("show");}
 
-function errorStage() {
-  stage.className = "delivery-stage";
-  badge.className = "transmission-badge error";
-  badge.textContent = "ERROR";
-  deliveryTitle.textContent = "No llegó el mensaje";
-  deliveryText.textContent = "La base de datos no confirmó la recepción. Puedes volver a intentarlo.";
-  receipt?.classList.remove("show");
-}
-
-function watchDeliveryStatus(messageKey) {
-  stopWatchingCurrentMessage();
-  currentMessageKey = messageKey;
-  let seenExistingMessage = false;
-  activeMessageUnsubscribe = onValue(ref(db, `messages/${messageKey}`), snapshot => {
-    if (messageKey !== currentMessageKey) return;
-    if (!snapshot.exists()) {
-      if (seenExistingMessage) {
-        deletedStage();
-        stopWatchingCurrentMessage();
-        currentMessageKey = null;
-      }
+function watchDeliveryStatus(messageKey){
+  stopWatchingCurrentMessage();currentMessageKey=messageKey;let seenExistingMessage=false;
+  activeMessageUnsubscribe=onValue(ref(db,`messages/${messageKey}`),snapshot=>{
+    if(messageKey!==currentMessageKey) return;
+    if(!snapshot.exists()){
+      if(seenExistingMessage){deletedStage();stopWatchingCurrentMessage();currentMessageKey=null;}
       return;
     }
-    seenExistingMessage = true;
-    const data = snapshot.val();
-    if (data?.status === "Entregado") {
-      deliveredStage(data);
-      stopWatchingCurrentMessage();
-      currentMessageKey = null;
-    }
-  }, error => console.error("Error escuchando confirmación de entrega:", error));
+    seenExistingMessage=true;
+    const data=snapshot.val();
+    if(data?.status==="Entregado"){deliveredStage(data);stopWatchingCurrentMessage();currentMessageKey=null;}
+  },error=>console.error("Error escuchando confirmación de entrega:",error));
 }
 
-messageInput.addEventListener("input", updateCounter);
-updateCounter();
-resetStage();
+messageInput.addEventListener("input",updateCounter);updateCounter();resetStage();
 
-form.addEventListener("submit", async event => {
+form.addEventListener("submit",async event=>{
   event.preventDefault();
-  const name = nameInput.value.trim();
-  const message = messageInput.value.trim();
-  const protocol = protocolInput.value;
+  const name=nameInput.value.trim(),message=messageInput.value.trim(),protocol=protocolInput.value;
+  if(name.length<1||name.length>24){feedback.textContent="El nombre debe tener entre 1 y 24 caracteres.";feedback.className="message-feedback error";return;}
+  if(message.length<1||message.length>140){feedback.textContent="El mensaje debe tener entre 1 y 140 caracteres.";feedback.className="message-feedback error";return;}
 
-  if (name.length < 1 || name.length > 24) {
-    feedback.textContent = "El nombre debe tener entre 1 y 24 caracteres.";
-    feedback.className = "message-feedback error";
-    return;
-  }
-  if (message.length < 1 || message.length > 140) {
-    feedback.textContent = "El mensaje debe tener entre 1 y 140 caracteres.";
-    feedback.className = "message-feedback error";
-    return;
-  }
+  stopWatchingCurrentMessage();submitBtn.disabled=true;submitBtn.textContent="Transmitiendo…";feedback.textContent="Enviando paquete a Realtime Database…";feedback.className="message-feedback sending";beginStage();
 
-  stopWatchingCurrentMessage();
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Transmitiendo…";
-  feedback.textContent = "Enviando paquete a Realtime Database…";
-  feedback.className = "message-feedback sending";
-  beginStage();
+  try{
+    const createdAt=Date.now();
+    const newMessage=push(ref(db,"messages"));
+    const messageNumber=shortMessageNumber(newMessage.key);
+    const net=networkInfo();
+    const writeStart=performance.now();
 
-  try {
-    const createdAt = Date.now();
-    const newMessage = push(ref(db, "messages"));
-    const messageNumber = shortMessageNumber(newMessage.key);
-    const net = networkInfo();
-    const writeStart = performance.now();
+    await set(newMessage,{name,message,protocol,status:"En tránsito",createdAt,messageNumber,effectiveType:net.effectiveType,browserRttMs:net.browserRttMs,downlinkMbps:net.downlinkMbps});
+    const firebaseWriteMs=Math.max(1,Math.round(performance.now()-writeStart));
+    const confirmStart=performance.now();
 
-    await set(newMessage, {
-      name,
-      message,
-      protocol,
-      status: "En tránsito",
-      createdAt,
-      messageNumber,
-      effectiveType: net.effectiveType,
-      browserRttMs: net.browserRttMs,
-      downlinkMbps: net.downlinkMbps
-    });
-
-    const firebaseWriteMs = Math.max(1, Math.round(performance.now() - writeStart));
-    const confirmStart = performance.now();
-
-    const storedData = await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error("Tiempo de espera agotado")), 6000);
-      const unsubscribe = onValue(ref(db, `messages/${newMessage.key}`), snapshot => {
-        if (snapshot.exists()) {
-          clearTimeout(timeout);
-          const data = snapshot.val();
-          unsubscribe();
-          resolve(data);
+    const storedData=await new Promise((resolve,reject)=>{
+      const timeout=setTimeout(()=>reject(new Error("Tiempo de espera agotado")),6000);
+      const unsubscribe=onValue(ref(db,`messages/${newMessage.key}`),snapshot=>{
+        if(snapshot.exists()){
+          clearTimeout(timeout);const data=snapshot.val();unsubscribe();resolve(data);
         }
-      }, reject, { onlyOnce: false });
+      },reject,{onlyOnce:false});
     });
 
-    const confirmationReadMs = Math.max(1, Math.round(performance.now() - confirmStart));
-    const networkVariationMs = Math.abs(firebaseWriteMs - confirmationReadMs);
+    const confirmationReadMs=Math.max(1,Math.round(performance.now()-confirmStart));
+    const networkVariationMs=Math.abs(firebaseWriteMs-confirmationReadMs);
+    currentLocalMetrics={firebaseWriteMs,confirmationReadMs,networkVariationMs,...net,protocol,createdAt,messageNumber};
+    currentMessageKey=newMessage.key;
 
-    await update(newMessage, { firebaseWriteMs, confirmationReadMs, networkVariationMs });
-    const enrichedData = {...storedData, firebaseWriteMs, confirmationReadMs, networkVariationMs};
-
-    currentMessageKey = newMessage.key;
-    storedStage(enrichedData);
-    feedback.textContent = `Mensaje #${messageNumber} guardado · escritura ${firebaseWriteMs} ms · variación observada ${networkVariationMs} ms.`;
-    feedback.className = "message-feedback sending";
+    storedStage(storedData);
+    feedback.textContent=`Mensaje #${messageNumber} guardado · escritura ${firebaseWriteMs} ms · variación observada ${networkVariationMs} ms.`;
+    feedback.className="message-feedback sending";
     watchDeliveryStatus(newMessage.key);
-    form.reset();
-    protocolInput.value = "TCP";
-    updateCounter();
-  } catch (error) {
-    console.error("Error al enviar mensaje:", error);
-    errorStage();
-    feedback.textContent = "No se pudo confirmar el envío. Revisa la conexión o las reglas de Firebase.";
-    feedback.className = "message-feedback error";
+    form.reset();protocolInput.value="TCP";updateCounter();
+  }catch(error){
+    console.error("Error al enviar mensaje:",error);errorStage();feedback.textContent="No se pudo confirmar el envío. Revisa la conexión o las reglas de Firebase.";feedback.className="message-feedback error";
   }
 
-  submitBtn.disabled = false;
-  submitBtn.textContent = "Enviar otro mensaje";
+  submitBtn.disabled=false;submitBtn.textContent="Enviar otro mensaje";
 });
