@@ -85,6 +85,8 @@
   grid-row:3;
   margin-left:18px;
   align-self:stretch;
+  display:flex;
+  flex-direction:column;
 }
 .compact-link{
   grid-column:5/-1;
@@ -92,7 +94,7 @@
   margin-right:18px;
   align-self:stretch;
 }
-.compact-add,.compact-link{min-height:158px}
+.compact-add,.compact-link{min-height:178px}
 
 /* Fila inferior: mismas dimensiones visuales */
 .compact-manage{
@@ -122,9 +124,12 @@
 }
 
 .compact-device-grid{
+  flex:1;
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:9px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-auto-rows:minmax(39px,1fr);
+  gap:10px;
+  align-content:stretch;
 }
 .compact-device-grid button,
 .compact-action,
@@ -139,19 +144,29 @@
   outline:none;
 }
 .compact-device-grid button{
-  min-height:35px;
-  padding:8px 7px;
+  min-height:39px;
+  width:100%;
+  padding:9px 8px;
   cursor:pointer;
-  font-size:10.5px;
-  font-weight:850;
+  font-size:11.2px;
+  line-height:1.12;
+  font-weight:900;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  text-align:center;
+  letter-spacing:-.01em;
+  border-color:rgba(28,126,172,.22);
+  background:linear-gradient(180deg,#ffffff,#f7fbfe);
   transition:.18s transform,.18s border-color,.18s box-shadow,.18s background;
 }
+.compact-device-grid button:nth-last-child(1):nth-child(odd){grid-column:1/-1}
 .compact-device-grid button:hover,
 .compact-action:hover{
   transform:translateY(-1px);
   border-color:#1c7eac;
   box-shadow:0 10px 22px rgba(0,59,113,.1);
 }
+.compact-device-grid button:hover{background:#edf8fe}
 
 .inline-controls{display:flex;align-items:center;gap:10px;min-width:0}
 .inline-controls + .inline-controls{margin-top:10px}
@@ -279,7 +294,7 @@
 @media(max-width:1260px){
   .compact-add{grid-column:1/span 5;grid-row:3}
   .compact-link{grid-column:6/-1;grid-row:3}
-  .compact-device-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .compact-device-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .compact-manage{grid-column:1/span 4;grid-row:5}
   .compact-ping{grid-column:5/span 4;grid-row:5}
   .compact-selected{grid-column:9/-1;grid-row:5}
@@ -289,7 +304,7 @@
   .workspace-toolbar,.compact-toolbar-title,.compact-add,.compact-link,.workspace,.compact-manage,.compact-ping,.compact-selected,.compact-note,.sim-controls{grid-column:1;grid-row:auto;margin-left:10px;margin-right:10px}
   .topology-tip{display:inline-block;margin-top:8px;max-width:100%}
   .compact-toolbar-title{display:block}
-  .compact-device-grid{grid-template-columns:1fr 1fr}
+  .compact-device-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .link-controls:first-of-type,.compact-link .second-line,.ping-controls,.manage-controls{grid-template-columns:1fr}
   .ping-controls #extraPing{margin-top:0}
   .arrow-mini{display:none}
