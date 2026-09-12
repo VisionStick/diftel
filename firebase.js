@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/fireba
 import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBztc4L1_GsLPnOwdh5dAV2Ca7B3806Wx0",
+  apiKey: "AIzaSyBztc4lL_GsLPnOwdh5dAV2Ca7B3806Wx0",
   authDomain: "diftel-jbbg.firebaseapp.com",
   databaseURL: "https://diftel-jbbg-default-rtdb.firebaseio.com",
   projectId: "diftel-jbbg",
