@@ -28,39 +28,108 @@ const deliveryText = document.getElementById("deliveryText");
 const deliveryPointServer = document.getElementById("deliveryPointServer");
 const deliveryPointDb = document.getElementById("deliveryPointDb");
 
+let activeMessageUnsubscribe = null;
+let currentMessageKey = null;
+
+let receipt = document.getElementById("deliveryReceipt");
+if (!receipt && stage) {
+  receipt = document.createElement("div");
+  receipt.id = "deliveryReceipt";
+  receipt.className = "delivery-receipt";
+  receipt.innerHTML = '<small>CONFIRMACIÓN DE RECEPCIÓN</small><strong id="deliveryReceiptText">Esperando confirmación…</strong>';
+  stage.querySelector(".delivery-copy")?.appendChild(receipt);
+}
+const receiptText = document.getElementById("deliveryReceiptText");
+
 function updateCounter() {
   counter.textContent = `${messageInput.value.length}/140`;
 }
 
+function stopWatchingCurrentMessage() {
+  if (activeMessageUnsubscribe) {
+    activeMessageUnsubscribe();
+    activeMessageUnsubscribe = null;
+  }
+}
+
+function clearBurst() {
+  stage?.querySelectorAll(".delivery-burst-dot").forEach(dot => dot.remove());
+}
+
+function deliveryBurst() {
+  if (!stage) return;
+  clearBurst();
+  const pieces = 18;
+  for (let i = 0; i < pieces; i++) {
+    const dot = document.createElement("span");
+    dot.className = "delivery-burst-dot";
+    const angle = (Math.PI * 2 * i) / pieces;
+    const distance = 58 + Math.random() * 42;
+    dot.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+    dot.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+    dot.style.setProperty("--rot", `${Math.round(Math.random() * 220 - 110)}deg`);
+    stage.appendChild(dot);
+    setTimeout(() => dot.remove(), 1000);
+  }
+}
+
 function resetStage() {
+  stopWatchingCurrentMessage();
+  currentMessageKey = null;
+  clearBurst();
   stage.className = "delivery-stage";
   badge.className = "transmission-badge";
   badge.textContent = "ESPERA";
   deliveryTitle.textContent = "Listo para transmitir";
-  deliveryText.textContent = "Tu mensaje viajará por la red hasta quedar registrado en Firebase.";
+  deliveryText.textContent = "Tu mensaje viajará por la red y podrás ver cuando sea confirmado por administración.";
   deliveryPointServer.classList.remove("active", "done");
   deliveryPointDb.classList.remove("active", "done");
+  receipt?.classList.remove("show");
+  if (receiptText) receiptText.textContent = "Esperando confirmación…";
 }
 
 function beginStage() {
+  clearBurst();
   stage.className = "delivery-stage is-sending";
   badge.className = "transmission-badge sending";
   badge.textContent = "ENVIANDO";
-  deliveryTitle.textContent = "Paquete en tránsito 📩";
-  deliveryText.textContent = "El mensaje está viajando hacia el servidor. Esperando confirmación de la base de datos…";
+  deliveryTitle.textContent = "Mensaje viajando por la red 📩";
+  deliveryText.textContent = "El paquete está llegando a Firebase. Todavía falta la confirmación de entrega.";
   deliveryPointServer.classList.add("active");
-  deliveryPointDb.classList.remove("done");
+  deliveryPointDb.classList.remove("active", "done");
+  receipt?.classList.remove("show");
 }
 
-function successStage() {
-  stage.className = "delivery-stage is-success";
-  badge.className = "transmission-badge success";
-  badge.textContent = "RECIBIDO";
-  deliveryTitle.textContent = "¡Mensaje recibido! 📬";
-  deliveryText.textContent = "Firebase confirmó que el mensaje quedó guardado correctamente.";
+function storedStage() {
+  stage.className = "delivery-stage is-stored";
+  badge.className = "transmission-badge waiting";
+  badge.textContent = "EN ESPERA";
+  deliveryTitle.textContent = "Mensaje recibido por el sistema";
+  deliveryText.textContent = "Firebase lo guardó correctamente. Ahora esperamos que administración lo marque como entregado.";
   deliveryPointServer.classList.remove("active");
   deliveryPointServer.classList.add("done");
   deliveryPointDb.classList.add("done");
+  receipt?.classList.add("show");
+  if (receiptText) receiptText.textContent = "Guardado en Firebase · esperando entrega";
+}
+
+function deliveredStage(data = {}) {
+  stage.className = "delivery-stage is-delivered";
+  badge.className = "transmission-badge success";
+  badge.textContent = "ENTREGADO";
+  deliveryTitle.textContent = "¡Llegó a destino! 🎉";
+  deliveryText.textContent = "Administración confirmó la recepción. La transmisión quedó completada.";
+  deliveryPointServer.classList.remove("active");
+  deliveryPointServer.classList.add("done");
+  deliveryPointDb.classList.add("done");
+  receipt?.classList.add("show");
+  if (receiptText) {
+    const time = data?.deliveredAt ? new Date(data.deliveredAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : "ahora";
+    receiptText.textContent = `Entregado correctamente · ${time}`;
+  }
+  feedback.textContent = "Confirmación final recibida: el mensaje fue marcado como entregado.";
+  feedback.className = "message-feedback success";
+  deliveryBurst();
 }
 
 function errorStage() {
@@ -69,10 +138,25 @@ function errorStage() {
   badge.textContent = "ERROR";
   deliveryTitle.textContent = "No llegó el mensaje";
   deliveryText.textContent = "La base de datos no confirmó la recepción. Puedes volver a intentarlo.";
+  receipt?.classList.remove("show");
 }
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function watchDeliveryStatus(messageKey) {
+  stopWatchingCurrentMessage();
+  currentMessageKey = messageKey;
+  activeMessageUnsubscribe = onValue(ref(db, `messages/${messageKey}`), snapshot => {
+    if (!snapshot.exists() || messageKey !== currentMessageKey) return;
+    const data = snapshot.val();
+    if (data?.status === "Entregado") {
+      deliveredStage(data);
+      stopWatchingCurrentMessage();
+      currentMessageKey = null;
+    }
+  }, error => console.error("Error escuchando confirmación de entrega:", error));
 }
 
 messageInput.addEventListener("input", updateCounter);
@@ -98,6 +182,7 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  stopWatchingCurrentMessage();
   submitBtn.disabled = true;
   submitBtn.textContent = "Transmitiendo…";
   feedback.textContent = "Enviando paquete a Realtime Database…";
@@ -109,10 +194,11 @@ form.addEventListener("submit", async (event) => {
       name,
       message,
       protocol,
-      status: "En tránsito"
+      status: "En tránsito",
+      createdAt: Date.now()
     });
 
-    await wait(900);
+    await wait(850);
 
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error("Tiempo de espera agotado")), 6000);
@@ -125,9 +211,10 @@ form.addEventListener("submit", async (event) => {
       }, reject, { onlyOnce: false });
     });
 
-    successStage();
-    feedback.textContent = "Confirmación recibida: el mensaje quedó guardado correctamente.";
-    feedback.className = "message-feedback success";
+    storedStage();
+    feedback.textContent = "Mensaje guardado. Mantén esta página abierta para ver la confirmación final de entrega.";
+    feedback.className = "message-feedback sending";
+    watchDeliveryStatus(newMessage.key);
     form.reset();
     updateCounter();
   } catch (error) {
@@ -138,5 +225,5 @@ form.addEventListener("submit", async (event) => {
   }
 
   submitBtn.disabled = false;
-  submitBtn.textContent = "Enviar mensaje";
+  submitBtn.textContent = "Enviar otro mensaje";
 });
