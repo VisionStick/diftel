@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBztc4ll_GsLPnOwdh5dAV2CaZB3806Wx0",
@@ -73,6 +73,32 @@ function deliveryBurst() {
   }
 }
 
+function shortMessageNumber(key = "") {
+  return key.slice(-6).toUpperCase() || "------";
+}
+
+function formatClock(timestamp) {
+  if (!timestamp) return "ahora";
+  return new Date(timestamp).toLocaleTimeString("es-CL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  });
+}
+
+function formatDuration(start, end) {
+  if (!start || !end || end < start) return "tiempo no disponible";
+  const totalSeconds = Math.max(0, Math.round((end - start) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) return `${hours} h ${String(minutes).padStart(2, "0")} min ${String(seconds).padStart(2, "0")} s`;
+  if (minutes > 0) return `${minutes} min ${String(seconds).padStart(2, "0")} s`;
+  return `${seconds} s`;
+}
+
 function resetStage() {
   stopWatchingCurrentMessage();
   currentMessageKey = null;
@@ -100,7 +126,7 @@ function beginStage() {
   receipt?.classList.remove("show");
 }
 
-function storedStage() {
+function storedStage(data = {}) {
   stage.className = "delivery-stage is-stored";
   badge.className = "transmission-badge waiting";
   badge.textContent = "EN ESPERA";
@@ -110,7 +136,10 @@ function storedStage() {
   deliveryPointServer.classList.add("done");
   deliveryPointDb.classList.add("done");
   receipt?.classList.add("show");
-  if (receiptText) receiptText.textContent = "Guardado en Firebase · esperando entrega";
+  if (receiptText) {
+    const number = data.messageNumber || shortMessageNumber(currentMessageKey);
+    receiptText.innerHTML = `Mensaje #${number}<br><span style="font-weight:500;color:#6d8192">Guardado ${formatClock(data.createdAt)} · esperando entrega</span>`;
+  }
 }
 
 function deliveredStage(data = {}) {
@@ -123,13 +152,29 @@ function deliveredStage(data = {}) {
   deliveryPointServer.classList.add("done");
   deliveryPointDb.classList.add("done");
   receipt?.classList.add("show");
+
   if (receiptText) {
-    const time = data?.deliveredAt ? new Date(data.deliveredAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : "ahora";
-    receiptText.textContent = `Entregado correctamente · ${time}`;
+    const number = data.messageNumber || shortMessageNumber(currentMessageKey);
+    const deliveredTime = formatClock(data.deliveredAt);
+    const duration = formatDuration(data.createdAt, data.deliveredAt);
+    receiptText.innerHTML = `Mensaje #${number}<br><span style="font-weight:500;color:#1b7953">Entregado ${deliveredTime} · demoró ${duration}</span>`;
   }
+
   feedback.textContent = "Confirmación final recibida: el mensaje fue marcado como entregado.";
   feedback.className = "message-feedback success";
   deliveryBurst();
+}
+
+function deletedStage() {
+  stage.className = "delivery-stage";
+  badge.className = "transmission-badge error";
+  badge.textContent = "ELIMINADO";
+  deliveryTitle.textContent = "El mensaje fue retirado";
+  deliveryText.textContent = "Administración eliminó este mensaje antes de completar la entrega.";
+  receipt?.classList.add("show");
+  if (receiptText) receiptText.textContent = "El registro ya no existe en Firebase";
+  feedback.textContent = "El mensaje fue eliminado por administración.";
+  feedback.className = "message-feedback error";
 }
 
 function errorStage() {
@@ -148,8 +193,21 @@ function wait(ms) {
 function watchDeliveryStatus(messageKey) {
   stopWatchingCurrentMessage();
   currentMessageKey = messageKey;
+  let seenExistingMessage = false;
+
   activeMessageUnsubscribe = onValue(ref(db, `messages/${messageKey}`), snapshot => {
-    if (!snapshot.exists() || messageKey !== currentMessageKey) return;
+    if (messageKey !== currentMessageKey) return;
+
+    if (!snapshot.exists()) {
+      if (seenExistingMessage) {
+        deletedStage();
+        stopWatchingCurrentMessage();
+        currentMessageKey = null;
+      }
+      return;
+    }
+
+    seenExistingMessage = true;
     const data = snapshot.val();
     if (data?.status === "Entregado") {
       deliveredStage(data);
@@ -190,29 +248,36 @@ form.addEventListener("submit", async (event) => {
   beginStage();
 
   try {
-    const newMessage = await push(ref(db, "messages"), {
+    const createdAt = Date.now();
+    const newMessage = push(ref(db, "messages"));
+    const messageNumber = shortMessageNumber(newMessage.key);
+
+    await set(newMessage, {
       name,
       message,
       protocol,
       status: "En tránsito",
-      createdAt: Date.now()
+      createdAt,
+      messageNumber
     });
 
+    currentMessageKey = newMessage.key;
     await wait(850);
 
-    await new Promise((resolve, reject) => {
+    const storedData = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error("Tiempo de espera agotado")), 6000);
       const unsubscribe = onValue(ref(db, `messages/${newMessage.key}`), snapshot => {
         if (snapshot.exists()) {
           clearTimeout(timeout);
+          const data = snapshot.val();
           unsubscribe();
-          resolve();
+          resolve(data);
         }
       }, reject, { onlyOnce: false });
     });
 
-    storedStage();
-    feedback.textContent = "Mensaje guardado. Mantén esta página abierta para ver la confirmación final de entrega.";
+    storedStage(storedData);
+    feedback.textContent = `Mensaje #${messageNumber} guardado. Mantén esta página abierta para ver la confirmación final.`;
     feedback.className = "message-feedback sending";
     watchDeliveryStatus(newMessage.key);
     form.reset();
