@@ -42,17 +42,42 @@ const messageProtocols = [
   ["ARP", "ARP · Resolución IP/MAC"],
   ["ETHERNET", "Ethernet · Trama LAN"]
 ];
+
+const protocolDescriptions = {
+  TCP: "TCP confirma la entrega, mantiene el orden y retransmite datos si es necesario.",
+  UDP: "UDP envía datagramas con menos sobrecarga y sin confirmar cada entrega.",
+  HTTP: "HTTP se usa para intercambiar solicitudes y respuestas web sin cifrado propio.",
+  HTTPS: "HTTPS protege la comunicación web mediante TLS.",
+  ICMP: "ICMP se usa para diagnóstico y control de red; Ping es uno de sus usos más conocidos.",
+  DNS: "DNS traduce nombres de dominio a direcciones IP.",
+  DHCP: "DHCP entrega automáticamente parámetros como IP, puerta de enlace y DNS.",
+  FTP: "FTP está diseñado para transferir archivos entre cliente y servidor.",
+  SMTP: "SMTP se utiliza para enviar correo electrónico entre clientes y servidores.",
+  SSH: "SSH permite acceso remoto seguro y cifrado a otro equipo.",
+  ARP: "ARP relaciona direcciones IPv4 con direcciones MAC dentro de una red local.",
+  ETHERNET: "Ethernet define el intercambio de tramas en redes LAN cableadas. UTP es el medio físico, no un protocolo."
+};
+
 protocolInput.innerHTML = messageProtocols.map(([value,label]) => `<option value="${value}">${label}</option>`).join("");
 protocolInput.value = "TCP";
 
-const protocolNote = document.createElement("small");
-protocolNote.className = "message-protocol-note";
-protocolNote.textContent = "Nota: UTP es cableado, no un protocolo. Por eso incluimos TCP/UDP y Ethernet para explicarlo correctamente.";
-protocolInput.parentElement?.appendChild(protocolNote);
+let protocolNote = document.getElementById("messageProtocolHelp");
+if (!protocolNote) {
+  protocolNote = document.createElement("small");
+  protocolNote.id = "messageProtocolHelp";
+  protocolNote.className = "message-protocol-note";
+  protocolInput.parentElement?.appendChild(protocolNote);
+}
+
+function updateProtocolNote() {
+  protocolNote.textContent = protocolDescriptions[protocolInput.value] || "Selecciona un protocolo para ver una explicación breve.";
+}
+protocolInput.addEventListener("change", updateProtocolNote);
+updateProtocolNote();
 
 const runtimeStyle = document.createElement("style");
 runtimeStyle.textContent = `
-  .message-protocol-note{display:block;margin-top:6px;color:#71899a;font-size:9px;line-height:1.35;font-weight:500}
+  .message-protocol-note{display:block;margin-top:7px;color:#71899a;font-size:9px;line-height:1.45;font-weight:500;min-height:26px}
   .delivery-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px auto 0;max-width:390px}
   .delivery-metric{border:1px solid #dbe5ed;background:#fff;border-radius:7px;padding:8px 9px;text-align:left}
   .delivery-metric small{display:block;color:#7890a1;font:7px JetBrains Mono,monospace;letter-spacing:.08em}
@@ -225,7 +250,7 @@ form.addEventListener("submit",async event=>{
     feedback.textContent=`Mensaje #${messageNumber} guardado · escritura ${firebaseWriteMs} ms · variación observada ${networkVariationMs} ms.`;
     feedback.className="message-feedback sending";
     watchDeliveryStatus(newMessage.key);
-    form.reset();protocolInput.value="TCP";updateCounter();
+    form.reset();protocolInput.value="TCP";updateProtocolNote();updateCounter();
   }catch(error){
     console.error("Error al enviar mensaje:",error);errorStage();feedback.textContent="No se pudo confirmar el envío. Revisa la conexión o las reglas de Firebase.";feedback.className="message-feedback error";
   }
