@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#061a2b">
+  <meta name="theme-color" content="#f5f7fa">
   <title>DIFTEL SJ | Telemática USM</title>
   <meta name="description" content="Experiencia interactiva de Telemática USM inspirada en simuladores de redes.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="enhancements.css">
+  <link rel="stylesheet" href="styles.css?v=20260911-3">
+  <link rel="stylesheet" href="enhancements.css?v=20260911-3">
 </head>
 <body>
   <div class="noise"></div>
@@ -49,7 +49,7 @@
         </p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#simulador">Abrir simulación</a>
-          <a class="btn btn-secondary" href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer">Ver malla interactiva</a>
+          <a class="btn btn-secondary" href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer">Visitar página DIFTEL</a>
         </div>
       </div>
 
@@ -81,7 +81,20 @@
           <div class="panel-divider"></div>
           <div class="panel-title">PROTOCOLO</div>
           <label class="select-label" for="protocol">Tipo de tráfico</label>
-          <select id="protocol"><option>ICMP / Ping</option><option>HTTP / Web</option><option>DNS / Consulta</option></select>
+          <select id="protocol">
+            <option value="ICMP">ICMP · Ping / diagnóstico</option>
+            <option value="TCP">TCP · Transporte confiable</option>
+            <option value="UDP">UDP · Datagrama rápido</option>
+            <option value="HTTP">HTTP · Web</option>
+            <option value="HTTPS">HTTPS · Web segura</option>
+            <option value="DNS">DNS · Resolución de nombres</option>
+            <option value="DHCP">DHCP · Asignación de IP</option>
+            <option value="FTP">FTP · Transferencia de archivos</option>
+            <option value="SMTP">SMTP · Correo electrónico</option>
+            <option value="SSH">SSH · Acceso remoto</option>
+            <option value="ARP">ARP · Resolución IP/MAC</option>
+            <option value="ETHERNET">Ethernet · Trama LAN</option>
+          </select>
         </aside>
 
         <div class="workspace-wrap">
@@ -126,7 +139,23 @@
           <form class="message-form" id="messageForm">
             <div class="message-row">
               <label>Nombre<input id="senderName" type="text" maxlength="24" autocomplete="name" placeholder="Tu nombre" required></label>
-              <label>Protocolo<select id="messageProtocol"><option value="HTTP">HTTP</option><option value="ICMP">ICMP</option><option value="DNS">DNS</option></select></label>
+              <label>Protocolo
+                <select id="messageProtocol" aria-describedby="messageProtocolHelp">
+                  <option value="TCP">TCP · Transporte confiable</option>
+                  <option value="UDP">UDP · Datagrama rápido</option>
+                  <option value="HTTP">HTTP · Web</option>
+                  <option value="HTTPS">HTTPS · Web segura</option>
+                  <option value="ICMP">ICMP · Ping / diagnóstico</option>
+                  <option value="DNS">DNS · Resolución de nombres</option>
+                  <option value="DHCP">DHCP · Asignación de IP</option>
+                  <option value="FTP">FTP · Transferencia de archivos</option>
+                  <option value="SMTP">SMTP · Correo electrónico</option>
+                  <option value="SSH">SSH · Acceso remoto</option>
+                  <option value="ARP">ARP · Resolución IP/MAC</option>
+                  <option value="ETHERNET">Ethernet · Trama LAN</option>
+                </select>
+                <small id="messageProtocolHelp" class="message-protocol-note">TCP: entrega confiable, ordenada y con confirmación.</small>
+              </label>
             </div>
             <label>Mensaje<textarea id="senderMessage" maxlength="140" placeholder="Escribe un mensaje para transmitir…" required></textarea></label>
             <div class="message-meta"><span>Estado inicial: En tránsito</span><span id="messageCounter">0/140</span></div>
@@ -180,7 +209,7 @@
         </div>
 
         <div class="game-card">
-          <div class="game-topline"><span class="game-category" id="gameCategory">REDES</span><span class="game-number" id="gameNumber">1/6</span></div>
+          <div class="game-topline"><span class="game-category" id="gameCategory">REDES</span><span class="game-number" id="gameNumber">1/5</span></div>
           <div class="game-clue" id="gameClue"></div>
           <div class="game-input-wrap">
             <input class="game-answer" id="gameAnswer" type="text" autocomplete="off" placeholder="Escribe tu respuesta…">
@@ -211,7 +240,7 @@
         <a href="https://www.instagram.com/telematicausm" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>Telemática USM</strong><small>@telematicausm</small></div><b>↗</b></a>
         <a href="https://www.instagram.com/diftelusm/" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>DIFTEL USM</strong><small>@diftelusm</small></div><b>↗</b></a>
         <a href="https://www.instagram.com/ceetel.sj/" target="_blank" rel="noopener noreferrer"><span>IG</span><div><strong>CEETEL San Joaquín</strong><small>@ceetel.sj</small></div><b>↗</b></a>
-        <a href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer"><span>MX</span><div><strong>Malla interactiva</strong><small>diftel.josnic.cl</small></div><b>↗</b></a>
+        <a href="https://diftel.josnic.cl/" target="_blank" rel="noopener noreferrer"><span>WEB</span><div><strong>Página DIFTEL</strong><small>diftel.josnic.cl</small></div><b>↗</b></a>
       </div>
     </section>
   </main>
@@ -221,8 +250,8 @@
     <p>Sitio experimental de difusión · Proyecto independiente</p>
   </footer>
 
-  <script src="script.js"></script>
-  <script src="game.js"></script>
-  <script type="module" src="firebase.js"></script>
+  <script src="script.js?v=20260911-3"></script>
+  <script src="game.js?v=20260911-3"></script>
+  <script type="module" src="firebase.js?v=20260911-3"></script>
 </body>
 </html>
