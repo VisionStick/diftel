@@ -3,7 +3,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPe
 import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBztc4L1_GsLPnOwdh5dAV2Ca7B3806Wx0",
+  apiKey: "AIzaSyBztc4lL_GsLPnOwdh5dAV2Ca7B3806Wx0",
   authDomain: "diftel-jbbg.firebaseapp.com",
   databaseURL: "https://diftel-jbbg-default-rtdb.firebaseio.com",
   projectId: "diftel-jbbg",
@@ -49,7 +49,8 @@ function humanAuthError(error){
     'auth/operation-not-allowed':'Debes activar Correo/Contraseña en Firebase → Authentication → Sign-in method.',
     'auth/too-many-requests':'Firebase bloqueó temporalmente nuevos intentos. Espera un momento y prueba de nuevo.',
     'auth/network-request-failed':'No se pudo contactar Firebase. Revisa tu conexión.',
-    'auth/unauthorized-domain':'Agrega visionstick.github.io en Firebase → Authentication → Settings → Authorized domains.'
+    'auth/unauthorized-domain':'Agrega visionstick.github.io en Firebase → Authentication → Settings → Authorized domains.',
+    'auth/api-key-not-valid.-please-pass-a-valid-api-key.':'La API key configurada no es válida.'
   };
   return map[code] || `Firebase respondió: ${code || error?.message || 'error desconocido'}`;
 }
