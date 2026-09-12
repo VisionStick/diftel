@@ -43,11 +43,18 @@
   let firstConnect = null;
   let links = [];
 
+  document.querySelector('.protocol-help')?.remove();
+
   const compactBar = document.createElement('section');
   compactBar.className = 'topology-compact-bar';
   compactBar.innerHTML = `
+    <div class="compact-toolbar-title">
+      <strong>Herramientas de topología</strong>
+      <small>Agrega equipos, crea enlaces y prueba comunicación sin mover la página.</small>
+    </div>
+
     <div class="compact-group compact-add">
-      <span class="compact-title">Agregar</span>
+      <span class="compact-title">Agregar equipo</span>
       <div class="compact-device-grid">
         <button type="button" data-add="pc">PC</button>
         <button type="button" data-add="laptop">Notebook</button>
@@ -59,42 +66,48 @@
       </div>
     </div>
 
-    <div class="compact-group compact-cable">
-      <label>Enlace
-        <select id="extraCable">
+    <div class="compact-group compact-link">
+      <span class="compact-title">Crear conexión</span>
+      <div class="inline-controls link-controls">
+        <select id="linkFrom" aria-label="Dispositivo de origen para enlace"></select>
+        <span class="arrow-mini">↔</span>
+        <select id="linkTo" aria-label="Dispositivo de destino para enlace"></select>
+      </div>
+      <div class="inline-controls link-controls second-line">
+        <select id="extraCable" aria-label="Tipo de cable">
           <option value="utp-directo">UTP directo</option>
           <option value="utp-cruzado">UTP cruzado</option>
           <option value="fibra">Fibra óptica</option>
           <option value="wifi">WiFi</option>
           <option value="serial">Serial</option>
         </select>
-      </label>
-      <button class="compact-action" id="extraConnect" type="button">Conectar</button>
+        <button class="compact-action primary" id="extraCreateLink" type="button">Crear enlace</button>
+      </div>
+      <button class="compact-action subtle map-connect" id="extraConnect" type="button">O elegir 2 equipos en el mapa</button>
+      <span class="compact-feedback" id="linkFeedback">Primero conecta el equipo nuevo; después podrás hacer ping.</span>
     </div>
 
     <div class="compact-group compact-ping">
       <span class="compact-title">Probar comunicación</span>
-      <select id="extraOrigin" aria-label="Origen del ping"></select>
-      <span class="arrow-mini">→</span>
-      <select id="extraDestination" aria-label="Destino del ping"></select>
-      <button class="compact-action primary" id="extraPing" type="button">Ping</button>
+      <div class="inline-controls ping-controls">
+        <select id="extraOrigin" aria-label="Origen del ping"></select>
+        <span class="arrow-mini">→</span>
+        <select id="extraDestination" aria-label="Destino del ping"></select>
+        <button class="compact-action primary" id="extraPing" type="button">Ping</button>
+      </div>
+      <span class="compact-ping-feedback">Elige dos equipos conectados por una ruta.</span>
     </div>
 
     <div class="compact-group compact-selected">
       <span class="compact-title">Seleccionado</span>
       <strong id="selectedName">Haz clic en un equipo</strong>
       <small id="selectedNet">IP / máscara / gateway</small>
-      <button class="compact-action subtle" id="openInspector" type="button">Editar</button>
-    </div>`;
+      <button class="compact-action subtle" id="openInspector" type="button">Editar IP</button>
+    </div>
+
+    <p class="compact-note"><strong>Dato rápido:</strong> TCP y UDP son protocolos de transporte. Ethernet representa la comunicación LAN y UTP es el cable físico.</p>`;
 
   workspaceToolbar.after(compactBar);
-
-  const protocolHelp = document.querySelector('.protocol-help');
-  if (protocolHelp) {
-    protocolHelp.classList.add('protocol-help-compact');
-    protocolHelp.innerHTML = '<strong>Dato rápido:</strong> TCP y UDP son protocolos de transporte. Ethernet representa la comunicación LAN y UTP es el cable físico.';
-    compactBar.appendChild(protocolHelp);
-  }
 
   const inspector = document.createElement('aside');
   inspector.className = 'floating-inspector hidden';
@@ -123,6 +136,10 @@
 
   const cableSelect = compactBar.querySelector('#extraCable');
   const connectBtn = compactBar.querySelector('#extraConnect');
+  const createLinkBtn = compactBar.querySelector('#extraCreateLink');
+  const linkFrom = compactBar.querySelector('#linkFrom');
+  const linkTo = compactBar.querySelector('#linkTo');
+  const linkFeedback = compactBar.querySelector('#linkFeedback');
   const pingOrigin = compactBar.querySelector('#extraOrigin');
   const pingDestination = compactBar.querySelector('#extraDestination');
   const pingBtn = compactBar.querySelector('#extraPing');
@@ -168,6 +185,11 @@
     eventList.scrollTop = eventList.scrollHeight;
   }
 
+  function setLinkFeedback(text, ok = null) {
+    linkFeedback.textContent = text;
+    linkFeedback.className = `compact-feedback ${ok === true ? 'ok' : ok === false ? 'bad' : ''}`;
+  }
+
   function getPercent(node) {
     const x = parseFloat(node.style.getPropertyValue('--x')) || 50;
     const y = parseFloat(node.style.getPropertyValue('--y')) || 50;
@@ -204,20 +226,38 @@
     updateAllLines();
   }
 
-  function updateSelects() {
+  function fillSelect(select, options, previous) {
+    select.innerHTML = options;
+    if (previous && currentNodes().some(n => n.id === previous)) select.value = previous;
+  }
+
+  function avoidSamePair(first, second) {
+    const nodes = currentNodes();
+    if (!first.value && nodes[0]) first.value = nodes[0].id;
+    if (!second.value && nodes[1]) second.value = nodes[1].id;
+    if (first.value === second.value && nodes.length > 1) {
+      second.value = nodes.find(n => n.id !== first.value)?.id || nodes[0].id;
+    }
+  }
+
+  function updateSelects(preferredId = null) {
     const nodes = currentNodes();
     const options = nodes.map(node => `<option value="${node.id}">${node.dataset.name || node.id}</option>`).join('');
-    const oldOrigin = pingOrigin.value;
-    const oldDestination = pingDestination.value;
 
-    pingOrigin.innerHTML = options;
-    pingDestination.innerHTML = options;
+    const oldValues = {
+      linkFrom: linkFrom.value,
+      linkTo: linkTo.value,
+      pingOrigin: pingOrigin.value,
+      pingDestination: pingDestination.value
+    };
 
-    if (nodes.some(n => n.id === oldOrigin)) pingOrigin.value = oldOrigin;
-    if (nodes.some(n => n.id === oldDestination)) pingDestination.value = oldDestination;
-    if (pingOrigin.value === pingDestination.value && nodes.length > 1) {
-      pingDestination.value = nodes.find(n => n.id !== pingOrigin.value)?.id || nodes[0].id;
-    }
+    fillSelect(linkFrom, options, preferredId || oldValues.linkFrom);
+    fillSelect(linkTo, options, oldValues.linkTo);
+    fillSelect(pingOrigin, options, preferredId || oldValues.pingOrigin);
+    fillSelect(pingDestination, options, oldValues.pingDestination);
+
+    avoidSamePair(linkFrom, linkTo);
+    avoidSamePair(pingOrigin, pingDestination);
   }
 
   function makeIcon(type) {
@@ -258,8 +298,9 @@
 
     workspace.appendChild(node);
     bindNode(node);
-    updateSelects();
-    selectNode(node, true);
+    updateSelects(id);
+    selectNode(node, false);
+    setLinkFeedback(`${node.dataset.name} agregado. Elige a qué equipo conectarlo y presiona “Crear enlace”.`);
     addLog('Dispositivo agregado', `${node.dataset.name} con IP ${ip}.`, 'success');
   }
 
@@ -336,7 +377,7 @@
     selected.querySelector('small').textContent = ip;
 
     selectNode(selected, false);
-    updateSelects();
+    updateSelects(selected.id);
     showFeedback('Configuración guardada correctamente.', true);
     addLog('Configuración guardada', `${name}: ${ip} / ${mask}`, 'success');
   }
@@ -410,6 +451,7 @@
       firstConnect = node;
       node.classList.add('connect-pick');
       simState && (simState.textContent = `Conectando desde ${node.dataset.name}`);
+      setLinkFeedback(`Ahora haz clic en el equipo destino para conectar con ${node.dataset.name}.`);
       return;
     }
 
@@ -427,8 +469,14 @@
   }
 
   function createLink(a, b, type) {
+    if (!a || !b) return setLinkFeedback('Selecciona dos dispositivos para conectar.', false);
+    if (a === b) return setLinkFeedback('No puedes conectar un equipo consigo mismo.', false);
+
     const exists = links.some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
-    if (exists) return addLog('Enlace existente', 'Esos dispositivos ya están conectados.', 'info');
+    if (exists) {
+      addLog('Enlace existente', 'Esos dispositivos ya están conectados.', 'info');
+      return setLinkFeedback('Ese enlace ya existe. Puedes probar el ping directamente.', false);
+    }
 
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.classList.add('extra-link');
@@ -442,6 +490,7 @@
     links.push(link);
     updateLine(link);
     updateSelects();
+    setLinkFeedback(`Conexión creada: ${nodeLabel(a)} ↔ ${nodeLabel(b)} por ${cableNames[type]}.`, true);
     addLog('Enlace creado', `${nodeLabel(a)} ↔ ${nodeLabel(b)} por ${cableNames[type]}.`, 'success');
   }
 
@@ -478,12 +527,9 @@
   }
 
   function setPingMessage(text, ok) {
-    const previous = compactBar.querySelector('.compact-ping-feedback');
-    previous?.remove();
-    const msg = document.createElement('span');
-    msg.className = `compact-ping-feedback ${ok ? 'ok' : 'bad'}`;
+    const msg = compactBar.querySelector('.compact-ping-feedback');
     msg.textContent = text;
-    compactBar.querySelector('.compact-ping').appendChild(msg);
+    msg.className = `compact-ping-feedback ${ok ? 'ok' : 'bad'}`;
   }
 
   async function simulatePing() {
@@ -492,7 +538,7 @@
     if (!start || !end || start === end) return setPingMessage('Elige dos equipos distintos.', false);
 
     const path = shortestPath(start, end);
-    if (path.length < 2) return setPingMessage('No hay ruta entre esos equipos.', false);
+    if (path.length < 2) return setPingMessage('No hay ruta. Crea una conexión primero.', false);
 
     setPingMessage(`Ruta: ${path.map(nodeLabel).join(' → ')}`, true);
     simState && (simState.textContent = 'Simulando ping');
@@ -525,14 +571,22 @@
     btn.addEventListener('click', () => addDevice(btn.dataset.add));
   });
 
+  createLinkBtn.addEventListener('click', () => createLink(linkFrom.value, linkTo.value, cableSelect.value));
+
   connectBtn.addEventListener('click', () => {
     connectMode = !connectMode;
     firstConnect?.classList.remove('connect-pick');
     firstConnect = null;
     connectBtn.classList.toggle('active', connectMode);
-    connectBtn.textContent = connectMode ? 'Elige 2 equipos' : 'Conectar';
+    connectBtn.textContent = connectMode ? 'Modo mapa activo' : 'O elegir 2 equipos en el mapa';
     simState && (simState.textContent = connectMode ? 'Haz clic en dos dispositivos' : 'Ruta lista');
+    setLinkFeedback(connectMode ? 'Modo mapa activo: haz clic en el primer equipo y luego en el segundo.' : 'También puedes crear enlaces usando los selectores de arriba.');
   });
+
+  linkFrom.addEventListener('change', () => avoidSamePair(linkFrom, linkTo));
+  linkTo.addEventListener('change', () => avoidSamePair(linkFrom, linkTo));
+  pingOrigin.addEventListener('change', () => avoidSamePair(pingOrigin, pingDestination));
+  pingDestination.addEventListener('change', () => avoidSamePair(pingOrigin, pingDestination));
 
   saveBtn.addEventListener('click', saveSelected);
   openInspector.addEventListener('click', () => {
