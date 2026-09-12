@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import { getDatabase, ref, push, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBztc4ll_GsLPnOwdh5dAV2CaZB3806Wx0",
@@ -28,6 +28,39 @@ const deliveryText = document.getElementById("deliveryText");
 const deliveryPointServer = document.getElementById("deliveryPointServer");
 const deliveryPointDb = document.getElementById("deliveryPointDb");
 
+const messageProtocols = [
+  ["TCP", "TCP · Transporte confiable"],
+  ["UDP", "UDP · Datagrama rápido"],
+  ["HTTP", "HTTP · Web"],
+  ["HTTPS", "HTTPS · Web segura"],
+  ["ICMP", "ICMP · Ping / diagnóstico"],
+  ["DNS", "DNS · Resolución de nombres"],
+  ["DHCP", "DHCP · Asignación de IP"],
+  ["FTP", "FTP · Transferencia de archivos"],
+  ["SMTP", "SMTP · Correo electrónico"],
+  ["SSH", "SSH · Acceso remoto"],
+  ["ARP", "ARP · Resolución IP/MAC"],
+  ["ETHERNET", "Ethernet · Trama LAN"]
+];
+protocolInput.innerHTML = messageProtocols.map(([value,label]) => `<option value="${value}">${label}</option>`).join("");
+protocolInput.value = "TCP";
+
+const protocolNote = document.createElement("small");
+protocolNote.className = "message-protocol-note";
+protocolNote.textContent = "Nota: UTP es cableado, no un protocolo. Por eso incluimos TCP/UDP y Ethernet para explicarlo correctamente.";
+protocolInput.parentElement?.appendChild(protocolNote);
+
+const runtimeStyle = document.createElement("style");
+runtimeStyle.textContent = `
+  .message-protocol-note{display:block;margin-top:6px;color:#71899a;font-size:9px;line-height:1.35;font-weight:500}
+  .delivery-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px auto 0;max-width:390px}
+  .delivery-metric{border:1px solid #dbe5ed;background:#fff;border-radius:7px;padding:8px 9px;text-align:left}
+  .delivery-metric small{display:block;color:#7890a1;font:7px JetBrains Mono,monospace;letter-spacing:.08em}
+  .delivery-metric strong{display:block;margin-top:4px;color:#294358;font-size:11px}
+  @media(max-width:620px){.delivery-metrics{grid-template-columns:1fr}}
+`;
+document.head.appendChild(runtimeStyle);
+
 let activeMessageUnsubscribe = null;
 let currentMessageKey = null;
 
@@ -36,14 +69,13 @@ if (!receipt && stage) {
   receipt = document.createElement("div");
   receipt.id = "deliveryReceipt";
   receipt.className = "delivery-receipt";
-  receipt.innerHTML = '<small>CONFIRMACIÓN DE RECEPCIÓN</small><strong id="deliveryReceiptText">Esperando confirmación…</strong>';
+  receipt.innerHTML = '<small>CONFIRMACIÓN DE RECEPCIÓN</small><strong id="deliveryReceiptText">Esperando confirmación…</strong><div class="delivery-metrics" id="deliveryMetrics"></div>';
   stage.querySelector(".delivery-copy")?.appendChild(receipt);
 }
 const receiptText = document.getElementById("deliveryReceiptText");
+const metricsBox = document.getElementById("deliveryMetrics");
 
-function updateCounter() {
-  counter.textContent = `${messageInput.value.length}/140`;
-}
+function updateCounter() { counter.textContent = `${messageInput.value.length}/140`; }
 
 function stopWatchingCurrentMessage() {
   if (activeMessageUnsubscribe) {
@@ -52,9 +84,7 @@ function stopWatchingCurrentMessage() {
   }
 }
 
-function clearBurst() {
-  stage?.querySelectorAll(".delivery-burst-dot").forEach(dot => dot.remove());
-}
+function clearBurst() { stage?.querySelectorAll(".delivery-burst-dot").forEach(dot => dot.remove()); }
 
 function deliveryBurst() {
   if (!stage) return;
@@ -73,18 +103,11 @@ function deliveryBurst() {
   }
 }
 
-function shortMessageNumber(key = "") {
-  return key.slice(-6).toUpperCase() || "------";
-}
+function shortMessageNumber(key = "") { return key.slice(-6).toUpperCase() || "------"; }
 
 function formatClock(timestamp) {
   if (!timestamp) return "ahora";
-  return new Date(timestamp).toLocaleTimeString("es-CL", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false
-  });
+  return new Date(timestamp).toLocaleTimeString("es-CL", {hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
 }
 
 function formatDuration(start, end) {
@@ -93,10 +116,38 @@ function formatDuration(start, end) {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-
-  if (hours > 0) return `${hours} h ${String(minutes).padStart(2, "0")} min ${String(seconds).padStart(2, "0")} s`;
-  if (minutes > 0) return `${minutes} min ${String(seconds).padStart(2, "0")} s`;
+  if (hours > 0) return `${hours} h ${String(minutes).padStart(2,"0")} min ${String(seconds).padStart(2,"0")} s`;
+  if (minutes > 0) return `${minutes} min ${String(seconds).padStart(2,"0")} s`;
   return `${seconds} s`;
+}
+
+function networkInfo() {
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  return {
+    effectiveType: connection?.effectiveType || "no disponible",
+    browserRttMs: Number.isFinite(connection?.rtt) ? connection.rtt : null,
+    downlinkMbps: Number.isFinite(connection?.downlink) ? connection.downlink : null
+  };
+}
+
+function metricCard(label, value) {
+  return `<div class="delivery-metric"><small>${label}</small><strong>${value}</strong></div>`;
+}
+
+function renderMetrics(data = {}, delivered = false) {
+  if (!metricsBox) return;
+  const latency = Number.isFinite(data.firebaseWriteMs) ? `${data.firebaseWriteMs} ms` : "—";
+  const variation = Number.isFinite(data.networkVariationMs) ? `${data.networkVariationMs} ms` : "—";
+  const rtt = Number.isFinite(data.browserRttMs) ? `≈ ${data.browserRttMs} ms` : "N/D";
+  const wait = delivered ? formatDuration(data.createdAt, data.deliveredAt) : "esperando";
+  metricsBox.innerHTML = [
+    metricCard("LATENCIA FIREBASE", latency),
+    metricCard("VARIACIÓN OBS.", variation),
+    metricCard("RTT NAVEGADOR", rtt),
+    metricCard("PROTOCOLO", data.protocol || "—"),
+    metricCard("RED", data.effectiveType || "—"),
+    metricCard("ACEPTACIÓN", wait)
+  ].join("");
 }
 
 function resetStage() {
@@ -112,6 +163,7 @@ function resetStage() {
   deliveryPointDb.classList.remove("active", "done");
   receipt?.classList.remove("show");
   if (receiptText) receiptText.textContent = "Esperando confirmación…";
+  if (metricsBox) metricsBox.innerHTML = "";
 }
 
 function beginStage() {
@@ -120,7 +172,7 @@ function beginStage() {
   badge.className = "transmission-badge sending";
   badge.textContent = "ENVIANDO";
   deliveryTitle.textContent = "Mensaje viajando por la red 📩";
-  deliveryText.textContent = "El paquete está llegando a Firebase. Todavía falta la confirmación de entrega.";
+  deliveryText.textContent = "Midiendo el tiempo de escritura y esperando confirmación de Firebase.";
   deliveryPointServer.classList.add("active");
   deliveryPointDb.classList.remove("active", "done");
   receipt?.classList.remove("show");
@@ -138,8 +190,9 @@ function storedStage(data = {}) {
   receipt?.classList.add("show");
   if (receiptText) {
     const number = data.messageNumber || shortMessageNumber(currentMessageKey);
-    receiptText.innerHTML = `Mensaje #${number}<br><span style="font-weight:500;color:#6d8192">Guardado ${formatClock(data.createdAt)} · esperando entrega</span>`;
+    receiptText.innerHTML = `Mensaje #${number}<br><span style="font-weight:500;color:#6d8192">Guardado ${formatClock(data.createdAt)} · esperando aceptación</span>`;
   }
+  renderMetrics(data, false);
 }
 
 function deliveredStage(data = {}) {
@@ -155,11 +208,9 @@ function deliveredStage(data = {}) {
 
   if (receiptText) {
     const number = data.messageNumber || shortMessageNumber(currentMessageKey);
-    const deliveredTime = formatClock(data.deliveredAt);
-    const duration = formatDuration(data.createdAt, data.deliveredAt);
-    receiptText.innerHTML = `Mensaje #${number}<br><span style="font-weight:500;color:#1b7953">Entregado ${deliveredTime} · demoró ${duration}</span>`;
+    receiptText.innerHTML = `Mensaje #${number}<br><span style="font-weight:500;color:#1b7953">Entregado ${formatClock(data.deliveredAt)} · aceptación en ${formatDuration(data.createdAt, data.deliveredAt)}</span>`;
   }
-
+  renderMetrics(data, true);
   feedback.textContent = "Confirmación final recibida: el mensaje fue marcado como entregado.";
   feedback.className = "message-feedback success";
   deliveryBurst();
@@ -173,6 +224,7 @@ function deletedStage() {
   deliveryText.textContent = "Administración eliminó este mensaje antes de completar la entrega.";
   receipt?.classList.add("show");
   if (receiptText) receiptText.textContent = "El registro ya no existe en Firebase";
+  if (metricsBox) metricsBox.innerHTML = "";
   feedback.textContent = "El mensaje fue eliminado por administración.";
   feedback.className = "message-feedback error";
 }
@@ -186,18 +238,12 @@ function errorStage() {
   receipt?.classList.remove("show");
 }
 
-function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function watchDeliveryStatus(messageKey) {
   stopWatchingCurrentMessage();
   currentMessageKey = messageKey;
   let seenExistingMessage = false;
-
   activeMessageUnsubscribe = onValue(ref(db, `messages/${messageKey}`), snapshot => {
     if (messageKey !== currentMessageKey) return;
-
     if (!snapshot.exists()) {
       if (seenExistingMessage) {
         deletedStage();
@@ -206,7 +252,6 @@ function watchDeliveryStatus(messageKey) {
       }
       return;
     }
-
     seenExistingMessage = true;
     const data = snapshot.val();
     if (data?.status === "Entregado") {
@@ -221,9 +266,8 @@ messageInput.addEventListener("input", updateCounter);
 updateCounter();
 resetStage();
 
-form.addEventListener("submit", async (event) => {
+form.addEventListener("submit", async event => {
   event.preventDefault();
-
   const name = nameInput.value.trim();
   const message = messageInput.value.trim();
   const protocol = protocolInput.value;
@@ -233,7 +277,6 @@ form.addEventListener("submit", async (event) => {
     feedback.className = "message-feedback error";
     return;
   }
-
   if (message.length < 1 || message.length > 140) {
     feedback.textContent = "El mensaje debe tener entre 1 y 140 caracteres.";
     feedback.className = "message-feedback error";
@@ -251,6 +294,8 @@ form.addEventListener("submit", async (event) => {
     const createdAt = Date.now();
     const newMessage = push(ref(db, "messages"));
     const messageNumber = shortMessageNumber(newMessage.key);
+    const net = networkInfo();
+    const writeStart = performance.now();
 
     await set(newMessage, {
       name,
@@ -258,11 +303,14 @@ form.addEventListener("submit", async (event) => {
       protocol,
       status: "En tránsito",
       createdAt,
-      messageNumber
+      messageNumber,
+      effectiveType: net.effectiveType,
+      browserRttMs: net.browserRttMs,
+      downlinkMbps: net.downlinkMbps
     });
 
-    currentMessageKey = newMessage.key;
-    await wait(850);
+    const firebaseWriteMs = Math.max(1, Math.round(performance.now() - writeStart));
+    const confirmStart = performance.now();
 
     const storedData = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error("Tiempo de espera agotado")), 6000);
@@ -276,11 +324,19 @@ form.addEventListener("submit", async (event) => {
       }, reject, { onlyOnce: false });
     });
 
-    storedStage(storedData);
-    feedback.textContent = `Mensaje #${messageNumber} guardado. Mantén esta página abierta para ver la confirmación final.`;
+    const confirmationReadMs = Math.max(1, Math.round(performance.now() - confirmStart));
+    const networkVariationMs = Math.abs(firebaseWriteMs - confirmationReadMs);
+
+    await update(newMessage, { firebaseWriteMs, confirmationReadMs, networkVariationMs });
+    const enrichedData = {...storedData, firebaseWriteMs, confirmationReadMs, networkVariationMs};
+
+    currentMessageKey = newMessage.key;
+    storedStage(enrichedData);
+    feedback.textContent = `Mensaje #${messageNumber} guardado · escritura ${firebaseWriteMs} ms · variación observada ${networkVariationMs} ms.`;
     feedback.className = "message-feedback sending";
     watchDeliveryStatus(newMessage.key);
     form.reset();
+    protocolInput.value = "TCP";
     updateCounter();
   } catch (error) {
     console.error("Error al enviar mensaje:", error);
