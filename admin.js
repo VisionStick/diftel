@@ -3,7 +3,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPe
 import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBztc4lL_GsLPnOwdh5dAV2CaZB3806Wx0",
+  apiKey: "AIzaSyBztc4ll_GsLPnOwdh5dAV2CaZB3806Wx0",
   authDomain: "diftel-jbbg.firebaseapp.com",
   databaseURL: "https://diftel-jbbg-default-rtdb.firebaseio.com",
   projectId: "diftel-jbbg",
