@@ -1,7 +1,17 @@
 /* Ajustes puntuales para mantener el diseño original, pero con más interacción */
 .status-pill{display:none!important}
 .protocol-help{display:none!important}
-.workspace-wrap{position:relative;overflow:visible}
+
+.workspace-wrap{
+  position:relative;
+  overflow:visible;
+  display:flex;
+  flex-direction:column;
+}
+.workspace-toolbar{order:1}
+.workspace{order:2}
+.topology-compact-bar{order:3}
+.sim-controls{order:4}
 
 .message-protocol-note{
   display:block;
@@ -18,12 +28,12 @@
 }
 .message-protocol-note strong{color:#003b71}
 
-/* Barra de herramientas: más aire, menos alto y sin botones saliéndose */
+/* Herramientas debajo de la topología: más limpio y menos invasivo */
 .topology-compact-bar{
-  margin:14px 18px 0;
+  margin:18px 18px 10px;
   padding:18px;
   display:grid;
-  grid-template-columns:minmax(210px,.85fr) minmax(300px,1.25fr);
+  grid-template-columns:minmax(210px,.85fr) minmax(330px,1.2fr) minmax(260px,1fr);
   gap:16px;
   align-items:start;
   border:1px solid rgba(20,70,105,.12);
@@ -71,12 +81,12 @@
   text-transform:uppercase;
 }
 
-.compact-add{grid-column:1;grid-row:2/span 2}
+.compact-add{grid-column:1;grid-row:2}
 .compact-link{grid-column:2;grid-row:2}
-.compact-manage{grid-column:1;grid-row:4}
-.compact-ping{grid-column:2;grid-row:3}
-.compact-selected{grid-column:2;grid-row:4}
-.compact-note{grid-column:1/-1;grid-row:5}
+.compact-ping{grid-column:3;grid-row:2}
+.compact-manage{grid-column:1/span 2;grid-row:3}
+.compact-selected{grid-column:3;grid-row:3}
+.compact-note{grid-column:1/-1;grid-row:4}
 
 .compact-device-grid{
   display:grid;
@@ -229,20 +239,17 @@
 .topology-ping-packet{position:absolute;left:12%;top:23%;width:38px;height:24px;transform:translate(-50%,-50%);display:none;align-items:center;justify-content:center;border-radius:999px;background:#ed1c24;color:white;font-size:9px;font-weight:900;letter-spacing:.03em;z-index:30;box-shadow:0 0 0 8px rgba(237,28,36,.16),0 12px 28px rgba(237,28,36,.28);pointer-events:none}
 .topology-ping-packet.active{display:flex}
 
-@media(min-width:1280px){
-  .topology-compact-bar{grid-template-columns:minmax(210px,.8fr) minmax(340px,1.2fr) minmax(300px,1fr)}
-  .compact-add{grid-column:1;grid-row:2}
-  .compact-link{grid-column:2;grid-row:2}
-  .compact-ping{grid-column:3;grid-row:2}
-  .compact-manage{grid-column:1/span 2;grid-row:3}
-  .compact-selected{grid-column:3;grid-row:3}
-  .compact-note{grid-column:1/-1;grid-row:4}
-}
 @media(max-width:1180px){
   .topology-compact-bar{grid-template-columns:1fr 1fr;padding:16px;gap:14px}
+  .compact-add{grid-column:1;grid-row:2}
+  .compact-link{grid-column:2;grid-row:2}
+  .compact-ping{grid-column:1;grid-row:3}
+  .compact-manage{grid-column:2;grid-row:3}
+  .compact-selected{grid-column:1/-1;grid-row:4}
+  .compact-note{grid-column:1/-1;grid-row:5}
 }
 @media(max-width:920px){
-  .topology-compact-bar{grid-template-columns:1fr;margin:10px 10px 0;padding:14px}
+  .topology-compact-bar{grid-template-columns:1fr;margin:12px 10px 8px;padding:14px}
   .compact-toolbar-title{display:block}
   .topology-tip{display:inline-block;margin-top:8px}
   .compact-add,.compact-link,.compact-manage,.compact-ping,.compact-selected,.compact-note{grid-column:1;grid-row:auto}
