@@ -120,6 +120,208 @@
   padding-inline: 13px;
 }
 
+/* Panel lateral vivo de la topología */
+.device-panel-live > .device-card {
+  display: none !important;
+}
+
+.device-panel-live #routeChooser {
+  display: none !important;
+}
+
+.live-topology-panel {
+  margin: 8px 0 16px;
+  padding: 10px;
+  border: 1px solid rgba(0, 90, 167, 0.14);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(238,247,252,0.92));
+  box-shadow: 0 12px 26px rgba(0, 59, 113, 0.06);
+}
+
+.live-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.live-panel-head strong {
+  display: block;
+  color: #0c2e4a;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.live-panel-head small {
+  display: block;
+  margin-top: 3px;
+  color: #658299;
+  font-size: 8.5px;
+  line-height: 1.3;
+}
+
+#liveDeviceCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #005aa7;
+  color: #ffffff;
+  font: 800 12px/1 Inter, system-ui, sans-serif;
+  box-shadow: 0 8px 18px rgba(0, 90, 167, 0.18);
+}
+
+.live-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.live-summary-grid div {
+  padding: 8px 6px;
+  border: 1px solid rgba(0, 166, 214, 0.16);
+  border-radius: 11px;
+  background: rgba(255,255,255,0.86);
+  text-align: center;
+}
+
+.live-summary-grid small {
+  display: block;
+  color: #6a8195;
+  font: 700 7px/1.1 'JetBrains Mono', monospace;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.live-summary-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: #003b71;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.live-device-list {
+  display: grid;
+  gap: 7px;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.live-device-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.live-device-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(0, 90, 167, 0.25);
+}
+
+.live-device-card {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 9px;
+  border: 1px solid rgba(0, 90, 167, 0.13);
+  border-radius: 13px;
+  background: rgba(255,255,255,0.92);
+  color: #0c2e4a;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.live-device-card:hover,
+.live-device-card.active {
+  border-color: rgba(0, 166, 214, 0.42);
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(0, 90, 167, 0.11);
+  transform: translateY(-1px);
+}
+
+.live-device-type {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #e9f8fd, #d8eef8);
+  color: #005aa7;
+  font: 900 10px/1 'JetBrains Mono', monospace;
+  border: 1px solid rgba(0, 166, 214, 0.22);
+}
+
+.live-device-card.router .live-device-type { background: #eef2ff; color: #3843a5; }
+.live-device-card.switch .live-device-type { background: #eafaf4; color: #0e855a; }
+.live-device-card.server .live-device-type { background: #fff7df; color: #986d00; }
+.live-device-card.ap .live-device-type,
+.live-device-card.phone .live-device-type { background: #f2ecff; color: #7350b8; }
+
+.live-device-main {
+  min-width: 0;
+}
+
+.live-device-main strong,
+.live-device-main small,
+.live-device-meta em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-device-main strong {
+  display: block;
+  color: #0c2e4a;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.live-device-main small {
+  display: block;
+  margin-top: 2px;
+  color: #005aa7;
+  font: 700 8.5px/1.2 'JetBrains Mono', monospace;
+}
+
+.live-device-meta {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  margin-left: 42px;
+}
+
+.live-device-meta em {
+  display: block;
+  color: #738ba0;
+  font: 600 8px/1.25 'JetBrains Mono', monospace;
+  font-style: normal;
+}
+
+.live-panel-note {
+  margin: 10px 2px 0;
+  color: #60788d;
+  font-size: 8.5px;
+  line-height: 1.35;
+}
+
+.node.sidebar-pulse {
+  animation: sidebarPulse .62s ease;
+}
+
+@keyframes sidebarPulse {
+  0%, 100% { filter: none; transform: translate(var(--x), var(--y)) scale(1); }
+  45% { filter: drop-shadow(0 0 14px rgba(0, 166, 214, .45)); transform: translate(var(--x), var(--y)) scale(1.06); }
+}
+
 @media (max-width: 900px) {
   .topbar {
     gap: 14px;
