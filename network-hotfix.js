@@ -46,4 +46,16 @@
       feedback.className = 'extra-feedback bad';
     }
   }, true);
+
+  function fixMetricLabels() {
+    document.querySelectorAll('.delivery-metric small').forEach(label => {
+      if (label.textContent === 'LATENCIA MEDIDA') label.textContent = 'TIEMPO DE ESCRITURA';
+      if (label.textContent === 'VARIACIÓN OBSERVADA') label.textContent = 'DIFERENCIA ENTRE OPERACIONES';
+      if (label.textContent === 'ACEPTACIÓN HUMANA') label.textContent = 'CONFIRMACIÓN DE APLICACIÓN';
+    });
+  }
+
+  const observer = new MutationObserver(fixMetricLabels);
+  observer.observe(document.body, {childList:true, subtree:true});
+  fixMetricLabels();
 })();
