@@ -6,6 +6,27 @@
 
   devicePanel.classList.add('device-panel-live');
 
+  // Se elimina el bloque informativo inferior para liberar espacio visual.
+  document.querySelector('.compact-note')?.remove();
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .live-device-mac {
+      color: #4f7088 !important;
+      letter-spacing: .015em;
+    }
+    .inspector-mac-field input[readonly] {
+      background: #f4f8fb;
+      color: #49687f;
+      cursor: default;
+    }
+    .compact-ping-feedback.pick-mode {
+      color: #005aa7;
+      font-weight: 700;
+    }
+  `;
+  document.head.appendChild(style);
+
   const firstTitle = devicePanel.querySelector('.panel-title');
   const liveBlock = document.createElement('section');
   liveBlock.className = 'live-topology-panel';
@@ -26,7 +47,7 @@
 
     <div class="live-device-list" id="liveDeviceList"></div>
 
-    <p class="live-panel-note">Haz clic para seleccionar. Doble clic en el equipo del mapa para editar IP, máscara y gateway.</p>
+    <p class="live-panel-note">Haz clic para seleccionar. Doble clic en un equipo para elegir origen y destino del ping.</p>
   `;
 
   if (firstTitle) {
@@ -60,6 +81,24 @@
       .replace(/'/g, '&#039;');
   }
 
+  function deterministicMac(seed) {
+    let hash = 2166136261;
+    const text = String(seed || 'device');
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    const bytes = [
+      0x02,
+      (hash >>> 24) & 255,
+      (hash >>> 16) & 255,
+      (hash >>> 8) & 255,
+      hash & 255,
+      (hash ^ 0xa5) & 255
+    ];
+    return bytes.map(v => v.toString(16).padStart(2, '0').toUpperCase()).join(':');
+  }
+
   function inferKind(node) {
     if (node.dataset.kind) return node.dataset.kind;
     if (node.id === 'srv' || node.classList.contains('server')) return 'server';
@@ -80,6 +119,11 @@
     return lines.filter(line => !line.dataset.hidden).length;
   }
 
+  function ensureMac(node) {
+    if (!node.dataset.mac) node.dataset.mac = deterministicMac(node.id || node.dataset.name);
+    return node.dataset.mac;
+  }
+
   function getNodeData(node) {
     const kind = inferKind(node);
     const interfaces = (() => {
@@ -94,7 +138,7 @@
       ip: node.dataset.ip || node.querySelector('small')?.textContent || 'Sin IP',
       mask: node.dataset.mask || '255.255.255.0',
       gateway: node.dataset.gateway || (kind === 'router' ? 'No aplica' : 'Sin gateway'),
-      mac: node.dataset.mac || 'MAC automática',
+      mac: ensureMac(node),
       interfaces,
       active: node.classList.contains('extra-selected') || node.classList.contains('selected') || node.classList.contains('hop-active')
     };
@@ -102,10 +146,31 @@
 
   function removeObsoleteRoute() {
     document.getElementById('routeChooser')?.remove();
+    document.querySelector('.compact-note')?.remove();
+  }
+
+  function ensureInspectorMacField() {
+    const grid = document.querySelector('.floating-inspector .inspector-grid');
+    if (!grid || document.getElementById('extraMac')) return;
+
+    const label = document.createElement('label');
+    label.className = 'inspector-mac-field';
+    label.innerHTML = 'MAC<input id="extraMac" readonly aria-label="Dirección MAC del dispositivo" />';
+    grid.appendChild(label);
+  }
+
+  function syncInspectorMac() {
+    ensureInspectorMacField();
+    const macInput = document.getElementById('extraMac');
+    if (!macInput) return;
+
+    const selectedNode = workspace.querySelector('.node.extra-selected, .node.selected');
+    macInput.value = selectedNode ? ensureMac(selectedNode) : '';
   }
 
   function renderDevices() {
     removeObsoleteRoute();
+    ensureInspectorMacField();
 
     const nodes = getNodes();
     const endKinds = new Set(['pc', 'laptop', 'phone', 'server']);
@@ -132,9 +197,12 @@
           <span class="live-device-meta">
             <em>${escapeHtml(data.mask)}</em>
             <em>GW ${escapeHtml(data.gateway)}</em>
+            <em class="live-device-mac">MAC ${escapeHtml(data.mac)}</em>
           </span>
         </button>`;
     }).join('');
+
+    syncInspectorMac();
   }
 
   function focusNode(id, openInspector = false) {
@@ -152,6 +220,65 @@
     setTimeout(() => node.classList.remove('sidebar-pulse'), 650);
     setTimeout(renderDevices, 80);
   }
+
+  let pingPickStep = 'origin';
+
+  function setPingFeedback(text) {
+    const feedback = document.querySelector('.compact-ping-feedback');
+    if (!feedback) return;
+    feedback.textContent = text;
+    feedback.classList.remove('ok', 'bad');
+    feedback.classList.add('pick-mode');
+  }
+
+  function setSelectValue(select, value) {
+    if (!select) return false;
+    const exists = Array.from(select.options).some(option => option.value === value);
+    if (!exists) return false;
+    select.value = value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  function assignPingEndpoint(node) {
+    const origin = document.getElementById('extraOrigin');
+    const destination = document.getElementById('extraDestination');
+    if (!origin || !destination) return;
+
+    if (pingPickStep === 'origin') {
+      if (!setSelectValue(origin, node.id)) return;
+      if (destination.value === node.id) {
+        const alternative = Array.from(destination.options).find(option => option.value !== node.id);
+        if (alternative) setSelectValue(destination, alternative.value);
+      }
+      pingPickStep = 'destination';
+      setPingFeedback(`Origen: ${node.dataset.name || node.id}. Doble clic en el equipo destino.`);
+      return;
+    }
+
+    if (origin.value === node.id) {
+      setPingFeedback('El destino debe ser distinto del origen. Elige otro equipo.');
+      return;
+    }
+
+    if (!setSelectValue(destination, node.id)) return;
+    pingPickStep = 'origin';
+    setPingFeedback(`Ping preparado: ${origin.options[origin.selectedIndex]?.text || origin.value} → ${destination.options[destination.selectedIndex]?.text || destination.value}.`);
+  }
+
+  // El doble clic queda dedicado a elegir origen/destino del ping.
+  // La edición del equipo sigue disponible con clic simple + “Editar IP”.
+  workspace.addEventListener('dblclick', event => {
+    const node = event.target.closest('.node');
+    if (!node || !workspace.contains(node)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    assignPingEndpoint(node);
+    node.classList.add('sidebar-pulse');
+    setTimeout(() => node.classList.remove('sidebar-pulse'), 650);
+  }, true);
 
   liveDeviceList.addEventListener('click', event => {
     const card = event.target.closest('.live-device-card');
