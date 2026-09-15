@@ -82,6 +82,9 @@
 
   function getNodeData(node) {
     const kind = inferKind(node);
+    const interfaces = (() => {
+      try { return JSON.parse(node.dataset.interfaces || '[]'); } catch { return []; }
+    })();
     return {
       id: node.id,
       kind,
@@ -90,7 +93,9 @@
       name: node.dataset.name || node.querySelector('strong')?.textContent || node.id,
       ip: node.dataset.ip || node.querySelector('small')?.textContent || 'Sin IP',
       mask: node.dataset.mask || '255.255.255.0',
-      gateway: node.dataset.gateway || 'Sin gateway',
+      gateway: node.dataset.gateway || (kind === 'router' ? 'No aplica' : 'Sin gateway'),
+      mac: node.dataset.mac || 'MAC automática',
+      interfaces,
       active: node.classList.contains('extra-selected') || node.classList.contains('selected') || node.classList.contains('hop-active')
     };
   }
@@ -114,12 +119,15 @@
 
     liveDeviceList.innerHTML = nodes.map(node => {
       const data = getNodeData(node);
+      const interfaceText = data.kind === 'router' && data.interfaces.length
+        ? data.interfaces.map(i => `${i.name} ${i.ip}`).join(' · ')
+        : data.ip;
       return `
         <button type="button" class="live-device-card ${escapeHtml(data.kind)} ${data.active ? 'active' : ''}" data-node-id="${escapeHtml(data.id)}">
           <span class="live-device-type">${escapeHtml(data.code)}</span>
           <span class="live-device-main">
             <strong>${escapeHtml(data.name)}</strong>
-            <small>${escapeHtml(data.ip)}</small>
+            <small>${escapeHtml(interfaceText)}</small>
           </span>
           <span class="live-device-meta">
             <em>${escapeHtml(data.mask)}</em>
@@ -168,7 +176,7 @@
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['class', 'data-name', 'data-ip', 'data-mask', 'data-gateway', 'data-kind']
+    attributeFilter: ['class', 'data-name', 'data-ip', 'data-mask', 'data-gateway', 'data-kind', 'data-interfaces', 'data-mac']
   });
 
   const panelObserver = new MutationObserver(() => {
@@ -187,4 +195,18 @@
   renderDevices();
   setTimeout(renderDevices, 250);
   setTimeout(renderDevices, 800);
+
+  if (!document.querySelector('script[data-network-engine]')) {
+    const engine = document.createElement('script');
+    engine.src = 'network-engine.js?v=20260914-1';
+    engine.dataset.networkEngine = 'true';
+    engine.onload = () => {
+      if (document.querySelector('script[data-network-hotfix]')) return;
+      const hotfix = document.createElement('script');
+      hotfix.src = 'network-hotfix.js?v=20260914-1';
+      hotfix.dataset.networkHotfix = 'true';
+      document.body.appendChild(hotfix);
+    };
+    document.body.appendChild(engine);
+  }
 })();
