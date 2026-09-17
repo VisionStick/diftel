@@ -57,9 +57,7 @@
   white-space: nowrap;
 }
 
-.net-selected-grid span b {
-  color: #003b71;
-}
+.net-selected-grid span b { color: #003b71; }
 
 .net-route-steps {
   display: flex;
@@ -99,26 +97,6 @@
   white-space: nowrap;
 }
 
-.node .node-mac {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -17px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .18s ease, transform .18s ease;
-  background: rgba(255,255,255,.96);
-  box-shadow: 0 6px 14px rgba(0, 59, 113, .08);
-}
-
-.node:hover .node-mac,
-.node.extra-selected .node-mac,
-.node.selected .node-mac,
-.node.hop-active .node-mac {
-  opacity: 1;
-  transform: translateX(-50%) translateY(2px);
-}
-
 .event.educational {
   border-color: rgba(0, 166, 214, 0.22) !important;
   background: linear-gradient(135deg, #ffffff, #f3fbff) !important;
@@ -127,17 +105,6 @@
 .event.educational > span {
   background: #e8f5fb !important;
   color: #0f6f9f !important;
-}
-
-.event.warning > span {
-  background: #fff4cf !important;
-  color: #8a6200 !important;
-}
-
-.extra-feedback.ok,
-.extra-feedback.bad,
-.net-inline-warning {
-  font-weight: 800;
 }
 
 .inspector-extra-row {
@@ -180,21 +147,161 @@
 
 .cable-help-note b { color: #5c4510; }
 
-.compact-note {
+/* Ajustes de stand: menos técnico, más visual */
+.protocol-help,
+.compact-note,
+.device-panel-live .live-device-mac,
+.node .node-mac,
+.device-panel-live .live-device-meta em:nth-child(2) {
   display: none !important;
 }
 
-@media (max-width: 1050px) {
-  .net-mini-stack {
-    grid-template-columns: 1fr;
+.device-panel-live {
+  display: flex;
+  flex-direction: column;
+}
+
+.device-panel-live .live-topology-panel {
+  flex: 1 1 auto;
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+.device-panel-live .live-device-list {
+  flex: 1 1 auto;
+  max-height: 690px;
+  min-height: 440px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  gap: 8px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.device-panel-live .live-device-list::-webkit-scrollbar,
+.event-panel .event-list::-webkit-scrollbar { width: 8px; }
+
+.device-panel-live .live-device-list::-webkit-scrollbar-thumb,
+.event-panel .event-list::-webkit-scrollbar-thumb {
+  background: rgba(28, 126, 172, .35);
+  border-radius: 999px;
+}
+
+.device-panel-live .live-device-card {
+  padding: 10px;
+  grid-template-columns: 38px minmax(0, 1fr);
+}
+
+.device-panel-live .live-device-type {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+
+.device-panel-live .live-device-main strong { font-size: 10.5px; }
+.device-panel-live .live-device-main small { font-size: 9px; }
+.device-panel-live .live-device-meta { margin-left: 46px; }
+
+.event-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.event-panel .event-list {
+  flex: 1 1 auto;
+  min-height: 520px;
+  max-height: none;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.net-mini-stack.simple-net-guide {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.simple-net-guide .net-truth-card,
+.simple-net-guide .net-selected-card {
+  background: #ffffff;
+  border: 1px solid rgba(28, 126, 172, .16);
+  border-radius: 18px;
+  box-shadow: 0 12px 26px rgba(0, 59, 113, .055);
+}
+
+.simple-net-guide .net-route-steps span {
+  background: #eef8fd;
+  color: #0a628c;
+  border: 1px solid rgba(28, 126, 172, .16);
+}
+
+.sim-telemetry div:nth-child(4) { display: none; }
+
+.sim-telemetry {
+  grid-template-columns: 1.25fr .75fr .9fr 1fr !important;
+}
+
+.packet.returning,
+.topology-ping-packet.returning {
+  background: #ffd23f !important;
+  color: #003b71 !important;
+  box-shadow: 0 0 0 8px rgba(255, 210, 63, .18), 0 16px 32px rgba(0, 59, 113, .22) !important;
+}
+
+.links line.route-return,
+.extra-link.route-return {
+  stroke: #ffd23f !important;
+  stroke-width: 5 !important;
+  opacity: 1 !important;
+}
+
+.node.hop-return {
+  box-shadow: 0 0 0 9px rgba(255, 210, 63, .20) !important;
+  outline: 2px solid rgba(255, 210, 63, .78) !important;
+}
+
+.inspector-extra-row.simple-extra-row { grid-template-columns: 1.4fr 1fr; }
+
+@media (min-width: 980px) {
+  .sim-shell {
+    grid-template-columns: clamp(215px, 18vw, 265px) minmax(520px, 1fr) clamp(175px, 13vw, 215px) !important;
+    align-items: stretch !important;
   }
+
+  .device-panel,
+  .event-panel { min-height: 850px; }
+}
+
+@media (min-width: 1280px) {
+  .sim-shell {
+    grid-template-columns: 270px minmax(680px, 1fr) 230px !important;
+  }
+
+  .device-panel,
+  .event-panel { min-height: 880px; }
+  .event-panel .event-list { min-height: 600px; }
+}
+
+@media (max-width: 1050px) {
+  .net-mini-stack,
+  .net-mini-stack.simple-net-guide { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 979px) {
+  .device-panel-live .live-topology-panel { min-height: 0; }
+
+  .device-panel-live .live-device-list,
+  .event-panel .event-list {
+    max-height: 360px;
+    min-height: 0;
+  }
+
+  .sim-telemetry { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
 
 @media (max-width: 700px) {
-  .net-mini-stack {
-    margin: 0 10px;
-  }
-  .net-selected-grid {
-    grid-template-columns: 1fr;
-  }
+  .net-mini-stack { margin: 0 10px; }
+  .net-selected-grid { grid-template-columns: 1fr; }
 }
