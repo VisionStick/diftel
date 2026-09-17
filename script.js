@@ -25,25 +25,25 @@ const protocolOptions = [
 ];
 
 const protocolProfiles = {
-  ICMP:{base:10,hop:3,jitter:2,note:'ICMP se usa principalmente para diagnóstico y mensajes de control.'},
-  TCP:{base:24,hop:5,jitter:4,note:'TCP confirma la entrega, mantiene el orden y retransmite si es necesario.'},
-  UDP:{base:12,hop:3,jitter:6,note:'UDP prioriza rapidez: envía datagramas sin confirmar cada entrega.'},
-  HTTP:{base:34,hop:5,jitter:7,note:'HTTP transporta solicitudes y respuestas web sin cifrado propio.'},
-  HTTPS:{base:46,hop:6,jitter:8,note:'HTTPS agrega cifrado TLS a la comunicación web.'},
-  DNS:{base:20,hop:4,jitter:5,note:'DNS traduce nombres de dominio a direcciones IP.'},
-  DHCP:{base:29,hop:5,jitter:7,note:'DHCP permite asignar parámetros de red automáticamente.'},
-  FTP:{base:42,hop:6,jitter:8,note:'FTP está orientado a la transferencia de archivos.'},
-  SMTP:{base:39,hop:5,jitter:7,note:'SMTP se utiliza para el envío de correo electrónico.'},
-  SSH:{base:36,hop:5,jitter:5,note:'SSH permite administrar equipos de forma remota y cifrada.'},
-  ARP:{base:8,hop:2,jitter:2,note:'ARP relaciona una dirección IPv4 con una dirección MAC dentro de la LAN.'},
-  ETHERNET:{base:5,hop:1,jitter:1,note:'Ethernet define el intercambio de tramas en una red local.'}
+  ICMP:{base:10,hop:3,jitter:2,note:'ICMP sirve para probar si un equipo responde en la red.'},
+  TCP:{base:24,hop:5,jitter:4,note:'TCP prioriza que el mensaje llegue completo y ordenado.'},
+  UDP:{base:12,hop:3,jitter:6,note:'UDP prioriza rapidez, aunque no confirma cada entrega.'},
+  HTTP:{base:34,hop:5,jitter:7,note:'HTTP permite pedir y recibir información de una página web.'},
+  HTTPS:{base:46,hop:6,jitter:8,note:'HTTPS hace lo mismo que HTTP, pero usando cifrado.'},
+  DNS:{base:20,hop:4,jitter:5,note:'DNS traduce un nombre de página a una dirección IP.'},
+  DHCP:{base:29,hop:5,jitter:7,note:'DHCP entrega una configuración de red automáticamente.'},
+  FTP:{base:42,hop:6,jitter:8,note:'FTP se usa para mover archivos entre equipos.'},
+  SMTP:{base:39,hop:5,jitter:7,note:'SMTP participa en el envío de correos electrónicos.'},
+  SSH:{base:36,hop:5,jitter:5,note:'SSH permite acceder a un equipo de forma remota y segura.'},
+  ARP:{base:8,hop:2,jitter:2,note:'ARP ayuda a encontrar la dirección física de un equipo en la red local.'},
+  ETHERNET:{base:5,hop:1,jitter:1,note:'Ethernet representa la comunicación dentro de una red local cableada.'}
 };
 
 protocol.innerHTML = protocolOptions.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
 
 const protocolHelp = document.createElement('p');
 protocolHelp.className = 'protocol-help';
-protocolHelp.innerHTML = '<strong>Dato:</strong> UDP y TCP son protocolos de transporte. UTP, en cambio, es un tipo de cableado; por eso aquí usamos Ethernet para representar la comunicación LAN.';
+protocolHelp.innerHTML = '<strong>Dato:</strong> el protocolo define cómo viaja la información; el cable solo es el camino físico.';
 protocol.insertAdjacentElement('afterend', protocolHelp);
 
 const helperStyle = document.createElement('style');
@@ -69,8 +69,8 @@ if(!telemetry){
   telemetry.innerHTML=`
     <div><small>PROTOCOLO</small><strong id="packetProtocol">${protocol.options[protocol.selectedIndex].textContent}</strong></div>
     <div><small>SALTOS</small><strong id="hopLabel">0 saltos</strong></div>
-    <div><small>LATENCIA SIM.</small><strong id="simLatency">—</strong></div>
-    <div><small>JITTER SIM.</small><strong id="simJitter">—</strong></div>
+    <div><small>TIEMPO SIM.</small><strong id="simLatency">—</strong></div>
+    <div><small>VARIACIÓN</small><strong id="simJitter">—</strong></div>
     <div><small>ESTADO</small><strong id="packetStatus">Preparado</strong></div>`;
   document.querySelector('.sim-controls')?.prepend(telemetry);
 }
@@ -188,8 +188,8 @@ function clearSelection(){
 }
 
 function clearRouteHighlights(){
-  linkLines.forEach(line=>line.classList.remove('route-active','route-done'));
-  nodes.forEach(node=>node.classList.remove('hop-active','hop-done'));
+  linkLines.forEach(line=>line.classList.remove('route-active','route-done','route-return'));
+  nodes.forEach(node=>node.classList.remove('hop-active','hop-done','hop-return'));
 }
 
 function getLink(a,b){
@@ -209,7 +209,7 @@ function updateRouteUI(){
   running=false;
   clearRouteHighlights();
   clearSelection();
-  packet.classList.remove('active','delivered');
+  packet.classList.remove('active','delivered','returning');
   setPacketAt(origin);
 
   originLabel.textContent=nodeName(origin);
@@ -290,12 +290,50 @@ function movePacket(id,duration,token){
   return new Promise((resolve,reject)=>{
     if(token!==generation) return reject(new Error('simulation-cancelled'));
     const p=positions[id];
-    packet.style.transition=`left ${duration}ms cubic-bezier(.4,0,.2,1), top ${duration}ms cubic-bezier(.4,0,.2,1)`;
+    packet.style.transition=`left ${duration}ms cubic-bezier(.22,.9,.28,1), top ${duration}ms cubic-bezier(.22,.9,.28,1)`;
     requestAnimationFrame(()=>{
       if(token===generation){packet.style.left=p.x+'%';packet.style.top=p.y+'%';}
     });
-    setTimeout(()=>token===generation?resolve():reject(new Error('simulation-cancelled')),duration+40);
+    setTimeout(()=>token===generation?resolve():reject(new Error('simulation-cancelled')),duration+25);
   });
+}
+
+async function travelRoute(route, token, phase, startNumber){
+  const isReturn = phase === 'Respuesta';
+  let eventNumber = startNumber;
+
+  for(let i=1;i<route.length;i++){
+    const from=route[i-1], to=route[i];
+    const line=getLink(from,to), node=getNode(to);
+
+    line?.classList.add('route-active');
+    if(isReturn) line?.classList.add('route-return');
+    node?.classList.add(isReturn ? 'hop-return' : 'hop-active');
+
+    simState.textContent=`${phase}: ${nodeName(from)} → ${nodeName(to)}`;
+    packetStatus.textContent=isReturn ? `Respuesta ← ${nodeName(to)}` : `Enviando → ${nodeName(to)}`;
+    hopLabel.textContent=`${i} / ${route.length-1}`;
+
+    await movePacket(to,390,token);
+
+    line?.classList.remove('route-active');
+    line?.classList.add('route-done');
+    node?.classList.remove('hop-active','hop-return');
+    node?.classList.add('hop-done');
+
+    const isLast=i===route.length-1;
+    addEvent(
+      eventNumber++,
+      phase,
+      isLast
+        ? `${nodeName(to)} recibió ${isReturn ? 'la respuesta' : 'el mensaje'}.`
+        : `Pasó por ${nodeName(to)} y sigue su camino.`,
+      isLast ? 'success' : 'normal'
+    );
+    await wait(80,token);
+  }
+
+  return eventNumber;
 }
 
 async function sendPacket(){
@@ -310,40 +348,38 @@ async function sendPacket(){
   eventList.innerHTML='';
   sendBtn.disabled=true;
   sendBtn.textContent='Transmitiendo…';
-  simState.textContent='Encapsulando paquete';
+  simState.textContent='Preparando mensaje';
   packetProtocol.textContent=protocol.options[protocol.selectedIndex].textContent;
-  packetStatus.textContent='En tránsito';
+  packetStatus.textContent='Ida →';
   hopLabel.textContent=`0 / ${route.length-1}`;
   simLatency.textContent=`${metrics.latency} ms`;
   simJitter.textContent=`±${metrics.jitter} ms`;
   setPacketAt(origin);
+  packet.classList.remove('returning','delivered');
   packet.classList.add('active');
   getNode(origin)?.classList.add('hop-done');
-  addEvent(1,nodeName(origin),`${protocol.value}: paquete creado con destino ${nodeName(destination)}. ${metrics.profile.note}`,'info');
+  addEvent(1,'Salida',`${nodeName(origin)} envía un mensaje usando ${protocol.value}. ${metrics.profile.note}`,'info');
 
   try{
-    await wait(260,token);
-    for(let i=1;i<route.length;i++){
-      const from=route[i-1],to=route[i];
-      const line=getLink(from,to),node=getNode(to);
-      line?.classList.add('route-active');
-      node?.classList.add('hop-active');
-      simState.textContent=`Salto ${i}: ${nodeName(to)}`;
-      packetStatus.textContent=`→ ${nodeName(to)}`;
-      hopLabel.textContent=`${i} / ${route.length-1}`;
-      await movePacket(to,620,token);
-      line?.classList.remove('route-active');
-      line?.classList.add('route-done');
-      node?.classList.remove('hop-active');
-      node?.classList.add('hop-done');
-      const isLast=i===route.length-1;
-      addEvent(i+1,nodeName(to),isLast?`Paquete recibido. Latencia simulada ${metrics.latency} ms, jitter ±${metrics.jitter} ms.`:'Paquete procesado y reenviado.',isLast?'success':'normal');
-      await wait(140,token);
-    }
+    await wait(180,token);
+    let nextEvent = await travelRoute(route,token,'Enviando',2);
+
     if(token!==generation)return;
+    simState.textContent='Destino recibido. Preparando respuesta';
+    packetStatus.textContent='Respuesta ←';
+    packet.classList.add('returning');
+    addEvent(nextEvent++,'Respuesta',`${nodeName(destination)} responde y el paquete vuelve por la misma ruta.`,'info');
+    await wait(260,token);
+
+    const returnRoute=[...route].reverse();
+    hopLabel.textContent=`0 / ${returnRoute.length-1}`;
+    await travelRoute(returnRoute,token,'Respuesta',nextEvent);
+
+    if(token!==generation)return;
+    packet.classList.remove('returning');
     packet.classList.add('delivered');
-    simState.textContent='Transmisión completada';
-    packetStatus.textContent='Entregado ✓';
+    simState.textContent='Ida y vuelta completadas';
+    packetStatus.textContent='Respuesta recibida ✓';
     sendBtn.textContent='Enviar nuevamente';
     sendBtn.disabled=false;
     running=false;
