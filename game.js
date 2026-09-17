@@ -1,28 +1,19 @@
 const questionBank = [
-  {category:"REDES",clue:"Soy el dispositivo que conecta redes diferentes y decide por dónde deben viajar los paquetes. ¿Qué soy?",answers:["router","enrutador"],display:"Router",hint:"Piensa en el equipo que toma decisiones de camino entre redes distintas."},
-  {category:"PROTOCOLOS",clue:"Me usan para comprobar si otro equipo responde en la red. ¿Qué comando soy?",answers:["ping"],display:"Ping",hint:"Envía una solicitud de eco y espera una respuesta."},
-  {category:"WEB",clue:"Soy el protocolo que normalmente usa un navegador para solicitar una página web sin cifrado. ¿Qué soy?",answers:["http"],display:"HTTP",hint:"Es la base de la comunicación web, pero aquí hablamos de su versión sin TLS."},
-  {category:"DNS",clue:"Transformo nombres como ejemplo.cl en direcciones IP. ¿Qué servicio soy?",answers:["dns"],display:"DNS",hint:"Evita que tengas que memorizar direcciones IP para entrar a un sitio."},
-  {category:"HARDWARE",clue:"Conecto equipos dentro de una misma LAN y reenvío tramas usando direcciones MAC. ¿Qué soy?",answers:["switch","conmutador"],display:"Switch",hint:"Trabajo principalmente en capa 2 y aprendo qué MAC está detrás de cada puerto."},
-  {category:"SEGURIDAD",clue:"Permito o bloqueo tráfico según reglas de seguridad. ¿Qué soy?",answers:["firewall","cortafuegos"],display:"Firewall",hint:"Funciono como un filtro de comunicaciones permitidas y bloqueadas."},
-  {category:"DIRECCIONES",clue:"Soy la dirección lógica usada para identificar interfaces y enrutar tráfico entre redes. ¿Qué soy?",answers:["ip","direccion ip","dirección ip"],display:"Dirección IP",hint:"No soy la dirección física de la tarjeta; puedo cambiar dependiendo de la red."},
-  {category:"LAN",clue:"Soy una red de alcance local, como la de una casa, laboratorio o edificio. ¿Qué tipo de red soy?",answers:["lan"],display:"LAN",hint:"Mi nombre viene de Local Area Network."},
-  {category:"WIFI",clue:"Permito conectar dispositivos a una red local mediante radio, sin cable Ethernet. ¿Qué tecnología soy?",answers:["wifi","wi-fi"],display:"Wi‑Fi",hint:"Me usas a diario desde notebooks y teléfonos."},
-  {category:"WEB",clue:"Uso HTTP protegido mediante TLS para cifrar la comunicación con un sitio web. ¿Qué soy?",answers:["https"],display:"HTTPS",hint:"Normalmente aparece junto al candado del navegador."},
-  {category:"MODELO OSI",clue:"¿Qué capa del modelo OSI se encarga del direccionamiento IP y del enrutamiento?",answers:["red","capa de red","3","capa 3"],display:"Capa 3 · Red",hint:"Está entre Transporte y Enlace de Datos."},
-  {category:"CABLEADO",clue:"Soy un medio físico de cobre formado por pares trenzados y muy usado en redes Ethernet. ¿Qué soy?",answers:["utp","cable utp","par trenzado","par trenzado sin blindaje"],display:"UTP",hint:"No soy el protocolo Ethernet ni el conector; soy el tipo de cable."},
-  {category:"CABLEADO",clue:"Soy el conector modular de ocho posiciones que comúnmente ves al final de un cable Ethernet de cobre. ¿Cómo me llaman habitualmente?",answers:["rj45","rj-45","8p8c"],display:"RJ45 / 8P8C",hint:"Estoy en la punta del cable, no soy el cable en sí."},
-  {category:"PUERTOS",clue:"¿Qué protocolo de aplicación normalmente utiliza el puerto TCP 80?",answers:["http"],display:"HTTP",hint:"Es navegación web sin cifrado TLS."},
-  {category:"PUERTOS",clue:"¿Qué protocolo de aplicación normalmente utiliza el puerto TCP 443?",answers:["https"],display:"HTTPS",hint:"Es navegación web protegida mediante TLS."},
-  {category:"SERVICIOS",clue:"Entrego recursos o servicios a otros equipos que actúan como clientes. ¿Qué soy?",answers:["servidor","server"],display:"Servidor",hint:"Formo una de las dos partes del modelo cliente-servidor."},
-  {category:"ARP",clue:"Dentro de una red IPv4 local, relaciono una dirección IP con una dirección MAC. ¿Qué protocolo soy?",answers:["arp"],display:"ARP",hint:"Antes de construir una trama Ethernet, el equipo puede necesitar preguntarme por la MAC del siguiente salto."},
-  {category:"GATEWAY",clue:"Si el destino está fuera de mi subred, ¿a qué equipo envío normalmente la trama para que enrute el paquete?",answers:["gateway","default gateway","puerta de enlace","puerta de enlace predeterminada","router","enrutador"],display:"Default Gateway",hint:"Es la puerta de salida de la red local."},
-  {category:"SUBREDES",clue:"¿Qué valor usa un host junto con su dirección IP para determinar qué parte identifica la red y qué parte identifica al host?",answers:["mascara","máscara","mascara de subred","máscara de subred","subnet mask"],display:"Máscara de subred",hint:"Por ejemplo: 255.255.255.0."},
-  {category:"TTL",clue:"Soy un campo del paquete IP que disminuye al atravesar routers y evita que un paquete circule para siempre. ¿Qué soy?",answers:["ttl","time to live"],display:"TTL",hint:"Cada router reduce mi valor antes de reenviar el paquete."},
-  {category:"ICMP",clue:"Ping utiliza mensajes Echo Request y Echo Reply de este protocolo. ¿Cuál es?",answers:["icmp"],display:"ICMP",hint:"Es un protocolo de control y diagnóstico de la capa de red."},
-  {category:"DHCP",clue:"Puedo entregar automáticamente IP, máscara, gateway y otros parámetros a un cliente. ¿Qué servicio soy?",answers:["dhcp"],display:"DHCP",hint:"Evito tener que configurar manualmente cada equipo."},
-  {category:"SWITCHING",clue:"¿Qué dirección aprende un switch a partir de las tramas que recibe para construir su tabla de reenvío?",answers:["mac","direccion mac","dirección mac","mac origen","direccion mac origen","dirección mac origen"],display:"Dirección MAC de origen",hint:"El switch observa quién envió la trama y por qué puerto llegó."},
-  {category:"ROUTING",clue:"Un router debe consultar esta información para decidir por qué interfaz o siguiente salto enviar un paquete. ¿Qué es?",answers:["tabla de enrutamiento","tabla de rutas","routing table","tabla routing"],display:"Tabla de enrutamiento",hint:"Contiene redes destino y cómo alcanzarlas."}
+  {category:"REDES",clue:"Soy el dispositivo que conecta redes diferentes y decide por dónde deben viajar los paquetes. ¿Qué soy?",answers:["router","enrutador"],hint:"Piensa en el equipo que toma decisiones de camino, no solo en el que reparte dentro de una sala."},
+  {category:"PROTOCOLOS",clue:"Me usan para comprobar si otro equipo responde en la red. ¿Qué comando soy?",answers:["ping"],hint:"Es una prueba de diagnóstico breve: envía una solicitud y espera respuesta."},
+  {category:"WEB",clue:"Soy el protocolo que normalmente usa un navegador para solicitar una página web. ¿Qué soy?",answers:["http","https"],hint:"Está relacionado con direcciones web y comunicación cliente-servidor."},
+  {category:"DNS",clue:"Transformo nombres como ejemplo.cl en direcciones IP. ¿Qué servicio soy?",answers:["dns"],hint:"Evita que tengas que memorizar números para entrar a un sitio."},
+  {category:"HARDWARE",clue:"Conecto equipos dentro de una misma red local y envío tramas al puerto correspondiente. ¿Qué soy?",answers:["switch","conmutador"],hint:"Trabaja dentro de una LAN y aprende direcciones físicas."},
+  {category:"SEGURIDAD",clue:"Permito o bloqueo tráfico según reglas. ¿Qué soy?",answers:["firewall","cortafuegos"],hint:"Funciona como un filtro entre comunicaciones permitidas y no permitidas."},
+  {category:"DIRECCIONES",clue:"Soy la dirección lógica que identifica a un equipo dentro de una red. ¿Qué soy?",answers:["ip","direccion ip","dirección ip"],hint:"No es la dirección física de la tarjeta de red; puede cambiar según la red."},
+  {category:"LAN",clue:"Soy una red que normalmente cubre una casa, sala o edificio. ¿Qué tipo de red soy?",answers:["lan"],hint:"Es una red de alcance reducido, comparada con una WAN."},
+  {category:"WIFI",clue:"Permito conectar dispositivos a una red sin usar cable Ethernet. ¿Qué tecnología soy?",answers:["wifi","wi-fi"],hint:"Cumple la misma idea de conexión local, pero por radiofrecuencia."},
+  {category:"WEB",clue:"Soy la versión segura de HTTP y cifro la comunicación con el sitio web. ¿Qué soy?",answers:["https"],hint:"Aparece en sitios web modernos cuando la comunicación va protegida."},
+  {category:"MODELO OSI",clue:"¿Qué capa del modelo OSI se encarga del direccionamiento IP y el enrutamiento?",answers:["red","capa de red","3","capa 3"],hint:"Está entre transporte y enlace de datos; ahí se decide el camino lógico."},
+  {category:"CABLEADO",clue:"Soy el cable típico usado para conectar un computador a un switch o router. ¿Qué tipo de cable soy?",answers:["ethernet","cable ethernet","utp","rj45"],hint:"Se asocia a redes LAN cableadas y suele terminar en un conector modular."},
+  {category:"PUERTOS",clue:"¿Qué protocolo normalmente usa el puerto 80 para páginas web sin cifrar?",answers:["http"],hint:"Es comunicación web, pero sin la capa de seguridad que se usa actualmente."},
+  {category:"PUERTOS",clue:"¿Qué protocolo normalmente usa el puerto 443 para navegación web segura?",answers:["https"],hint:"Es el protocolo web protegido por cifrado TLS."},
+  {category:"SERVICIOS",clue:"Soy el equipo que entrega recursos y servicios a otros equipos llamados clientes. ¿Qué soy?",answers:["servidor","server"],hint:"En el modelo cliente-servidor, este equipo responde solicitudes."}
 ];
 
 const clue = document.getElementById("gameClue");
@@ -112,11 +103,11 @@ function checkAnswer(){
   if(correct){
     score += 100;
     streak += 1;
-    feedback.textContent = `¡Correcto! ${q.display} 🎯 +100 puntos`;
+    feedback.textContent = "¡Correcto! Sumaste 100 puntos 🎯";
     feedback.className = "game-feedback good";
   }else{
     streak = 0;
-    feedback.textContent = `No era esa. La respuesta esperada era: ${q.display}.`;
+    feedback.textContent = "No era esa. Prueba la siguiente y fíjate en la pista conceptual.";
     feedback.className = "game-feedback bad";
   }
 
@@ -142,7 +133,7 @@ function showResult(){
   if(score === 500){
     feedback.textContent = "Perfecto: 5 de 5. Ya cachas lo esencial de redes 🚀";
   }else if(score >= 300){
-    feedback.textContent = "Buen resultado. Tienes una buena base; prueba otra ronda para ver conceptos distintos.";
+    feedback.textContent = "Buen resultado. Tienes una buena base de Telemática.";
   }else{
     feedback.textContent = "Buen intento. Juega otra ronda: te tocarán 5 preguntas diferentes.";
   }
