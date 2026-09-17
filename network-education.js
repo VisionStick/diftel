@@ -9,9 +9,11 @@
 
   if (!workspace) return;
 
-  const HOP_MS = 155;
-  const PAUSE_MS = 35;
-  const FINAL_HIDE_MS = 450;
+  // Velocidad pensada para feria: suficientemente lenta para seguir el recorrido,
+  // pero sin hacer eterna la demostración. Cada salto dura aprox. 1.2 segundos.
+  const HOP_MS = 1150;
+  const PAUSE_MS = 120;
+  const FINAL_HIDE_MS = 750;
 
   const baseLinks = [
     ['pc1', 'r1'],
@@ -38,7 +40,7 @@
       stroke-width: 5 !important;
       opacity: 1 !important;
       stroke-dasharray: 9 7 !important;
-      animation: fastDash .45s linear infinite;
+      animation: fastDash .9s linear infinite;
     }
     .links line.fast-return,
     .extra-link.fast-return {
@@ -227,11 +229,11 @@
     placeVisual(visual, start, true);
 
     addEvent('Ida', `${label(start)} envía información hacia ${label(end)}.`, 'info');
-    await sleep(90);
+    await sleep(180);
     await animatePath(path, visual, 'Enviando');
 
     addEvent('Llegada', `${label(end)} recibió la información.`, 'success');
-    await sleep(120);
+    await sleep(420);
 
     addEvent('Vuelta', `${label(end)} responde por la misma ruta.`, 'info');
     if (options.returnText) visual.textContent = options.returnText;
