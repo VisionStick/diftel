@@ -1,6 +1,17 @@
 (() => {
   const workspace = document.getElementById('workspace');
   const devicePanel = document.querySelector('.device-panel');
+  const WIKI_DIFTEL_URL = 'https://visionstick.github.io/wikidiftel/';
+
+  function updateWikiDiftelLinks() {
+    document.querySelectorAll('a[href="https://diftel.josnic.cl/"]').forEach(link => {
+      link.href = WIKI_DIFTEL_URL;
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+    });
+  }
+
+  updateWikiDiftelLinks();
 
   if (!workspace || !devicePanel) return;
 
@@ -187,4 +198,5 @@
   renderDevices();
   setTimeout(renderDevices, 250);
   setTimeout(renderDevices, 800);
+  setTimeout(updateWikiDiftelLinks, 1000);
 })();
